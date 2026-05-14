@@ -26,20 +26,14 @@ export const googleAuthController = async (req, res) => {
 
     const token = utils.generateJWT({ id: user._id, email: user.email });
 
-    const isProduction = config.NODE_ENV === "production";
+    const isLocalhost = config.CLIENT_URL.includes("localhost");
     const cookieOptions = {
       httpOnly: true,
-      secure: true, // Always use secure in production/deployed environments
-      sameSite: "none", // Required for cross-domain cookies (Vercel <-> Render)
+      secure: !isLocalhost, // secure must be true for sameSite: "none"
+      sameSite: isLocalhost ? "lax" : "none",
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       path: "/",
     };
-
-    // If development (localhost), use lax and secure: false
-    if (config.NODE_ENV === "development") {
-      cookieOptions.secure = false;
-      cookieOptions.sameSite = "lax";
-    }
 
     res.cookie("token", token, cookieOptions);
 
@@ -85,18 +79,13 @@ export const getCurrentUser = async (req, res) => {
 
 export const logoutController = async (req, res) => {
   try {
-    const isProduction = config.NODE_ENV === "production";
+    const isLocalhost = config.CLIENT_URL.includes("localhost");
     const cookieOptions = {
       httpOnly: true,
-      secure: true,
-      sameSite: "none",
+      secure: !isLocalhost,
+      sameSite: isLocalhost ? "lax" : "none",
       path: "/",
     };
-
-    if (config.NODE_ENV === "development") {
-      cookieOptions.secure = false;
-      cookieOptions.sameSite = "lax";
-    }
 
     res.clearCookie("token", cookieOptions);
     return res.status(200).json({ success: true, message: "Logged out successfully." });
