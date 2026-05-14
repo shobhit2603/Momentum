@@ -16,6 +16,26 @@ const userSchema = new mongoose.Schema(
     profilePicture: {
       type: String,
     },
+    friends: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+    friendRequests: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+    streak: {
+      type: Number,
+      default: 0,
+    },
+    lastActive: {
+      type: Date,
+      default: Date.now,
+    },
   },
   { timestamps: true },
 );

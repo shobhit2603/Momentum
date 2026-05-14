@@ -1,24 +1,74 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #000000;
+  --foreground: #ffffff;
+  --primary: #9d4edd; /* Vibrant Purple */
+  --primary-foreground: #ffffff;
+  --surface: #0a0a0a;
+  --surface-hover: #141414;
+  --border: #1f1f1f;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-primary: var(--primary);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-border: var(--border);
+  --font-sans: 'Switzer', sans-serif;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Switzer', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom Gradients */
+.text-gradient {
+  background: linear-gradient(to right, #e0aaff, #9d4edd);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+}
+
+.text-gradient-alt {
+  background: linear-gradient(to right, #fff, #a3a3a3);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Base utility for a glass surface */
+.glass-panel {
+  background: rgba(10, 10, 10, 0.6);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+@font-face {
+  font-family: 'Switzer';
+  src: url('../public/fonts/Switzer-Variable.woff2') format('woff2'),
+    url('../public/fonts/Switzer-Variable.woff') format('woff'),
+    url('../public/fonts/Switzer-Variable.ttf') format('truetype');
+  font-weight: 100 900;
+  font-display: swap;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Switzer-Italic';
+  src: url('../public/fonts/Switzer-VariableItalic.woff2') format('woff2'),
+    url('../public/fonts/Switzer-VariableItalic.woff') format('woff'),
+    url('../public/fonts/Switzer-VariableItalic.ttf') format('truetype');
+  font-weight: 100 900;
+  font-display: swap;
+  font-style: italic;
 }

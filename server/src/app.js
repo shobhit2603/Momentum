@@ -5,7 +5,6 @@ import cookieParser from "cookie-parser";
 import config from "./config/config.js";
 import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
-import authRouter from "./routes/auth.routes.js";
 
 const app = express();
 
@@ -46,7 +45,13 @@ passport.use(
   ),
 );
 
+import userRouter from "./routes/user.routes.js";
+import taskRouter from "./routes/task.routes.js";
+import reviewRouter from "./routes/review.routes.js";
+
 // Routes
-app.use("/api/auth", authRouter);
+app.use("/api/users", userRouter);
+app.use("/api/tasks", taskRouter);
+app.use("/api/reviews", reviewRouter);
 
 export default app;
