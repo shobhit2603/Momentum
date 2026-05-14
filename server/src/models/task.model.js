@@ -14,17 +14,13 @@ const taskSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["pending", "completed", "expired"],
-      default: "pending",
+      // Updated to exactly match your flow, plus "failed" for the midnight reset
+      enum: ["not started", "in progress", "completed", "failed"],
+      default: "not started",
     },
     date: {
       type: Date,
-      default: () => {
-        // Default to the start of today to make querying by day easier
-        const now = new Date();
-        now.setHours(0, 0, 0, 0);
-        return now;
-      },
+      default: Date.now, // Simplified this. We will handle the "Start of Day" logic in the controller instead.
     },
   },
   { timestamps: true },

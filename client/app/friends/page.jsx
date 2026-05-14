@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { UserPlus, ChatTeardropText, PaperPlaneRight, Fire, Smiley } from "@phosphor-icons/react";
+import { UserPlus, ChatTeardropText, PaperPlaneRight, Fire, Smiley, Check } from "@phosphor-icons/react";
 import { fetchAPI } from "@/lib/api";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -9,12 +9,22 @@ export default function FriendsFeed() {
   const [friends, setFriends] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
+  const [pendingRequests, setPendingRequests] = useState([]);
+  const [sentRequests, setSentRequests] = useState(new Set());
   const [activeReviewFriend, setActiveReviewFriend] = useState(null);
   const [reviewContent, setReviewContent] = useState("");
 
   useEffect(() => {
     loadFriends();
+    loadPendingRequests();
   }, []);
+
+  const loadPendingRequests = async () => {
+    const { status, data } = await fetchAPI("/users/friend-requests");
+    if (status === 200 && data.success) {
+      setPendingRequests(data.requests || []);
+    }
+  };
 
   const loadFriends = async () => {
     const { status, data } = await fetchAPI("/users/friends");
@@ -33,12 +43,28 @@ export default function FriendsFeed() {
   };
 
   const handleAddFriend = async (userId) => {
-    const { status } = await fetchAPI("/users/friend-request", {
+    const { status, data } = await fetchAPI("/users/friend-request", {
       method: "POST",
       body: JSON.stringify({ targetUserId: userId })
     });
     if (status === 200) {
-      alert("Friend request sent!");
+      setSentRequests(prev => new Set(prev).add(userId));
+    } else {
+      alert(data?.message || "Failed to send request.");
+    }
+  };
+
+  const handleAcceptFriend = async (requesterId) => {
+    const { status, data } = await fetchAPI("/users/friend-request/accept", {
+      method: "POST",
+      body: JSON.stringify({ requesterId })
+    });
+    if (status === 200) {
+      // Refresh both lists
+      loadFriends();
+      loadPendingRequests();
+    } else {
+      alert(data?.message || "Failed to accept request.");
     }
   };
 
@@ -103,8 +129,16 @@ export default function FriendsFeed() {
                     </div>
                     <span className="font-light text-white text-lg">{user.name}</span>
                   </div>
-                  <button onClick={() => handleAddFriend(user._id)} className="text-primary bg-primary/10 px-4 py-1.5 rounded-full text-sm font-medium hover:bg-primary/20 transition-colors">
-                    Add
+                  <button 
+                    onClick={() => handleAddFriend(user._id)} 
+                    disabled={sentRequests.has(user._id)}
+                    className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                      sentRequests.has(user._id) 
+                        ? "bg-surface-hover text-neutral-500 cursor-not-allowed" 
+                        : "text-primary bg-primary/10 hover:bg-primary/20"
+                    }`}
+                  >
+                    {sentRequests.has(user._id) ? "Sent" : "Add"}
                   </button>
                 </div>
               ))}
@@ -112,6 +146,35 @@ export default function FriendsFeed() {
           )}
         </AnimatePresence>
       </motion.div>
+
+      {/* Pending Requests */}
+      <AnimatePresence>
+        {pendingRequests.length > 0 && (
+          <motion.div 
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mb-12"
+          >
+            <h2 className="text-sm font-bold uppercase tracking-widest text-neutral-500 mb-4 ml-2">Pending Requests</h2>
+            <div className="glass-panel rounded-2xl overflow-hidden">
+              {pendingRequests.map((user, idx) => (
+                <div key={user._id} className={`flex items-center justify-between p-4 ${idx !== pendingRequests.length - 1 ? 'border-b border-border' : ''} bg-surface/50`}>
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full bg-surface-hover border border-border flex items-center justify-center overflow-hidden">
+                      {user.profilePicture ? <img src={user.profilePicture} alt={user.name} referrerPolicy="no-referrer" /> : <span className="text-primary font-medium">{user.name.charAt(0)}</span>}
+                    </div>
+                    <span className="font-light text-white text-lg">{user.name}</span>
+                  </div>
+                  <button onClick={() => handleAcceptFriend(user._id)} className="flex items-center gap-2 text-white bg-primary px-4 py-1.5 rounded-full text-sm font-medium hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20">
+                    <Check weight="bold" /> Accept
+                  </button>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="space-y-6">
         {friends.length === 0 ? (

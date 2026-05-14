@@ -10,7 +10,8 @@ export const googleAuthController = async (req, res) => {
     const profilePicture = req.user?.profilePicture || req.body?.profilePicture;
 
     if (!email || !name) {
-      return res.status(400).json({ success: false, message: "Email and name are required." });
+      // Redirect to frontend with an error param instead of JSON
+      return res.redirect(`${config.CLIENT_URL}?error=MissingData`);
     }
 
     let user = await userDao.getUser(email);
@@ -25,7 +26,9 @@ export const googleAuthController = async (req, res) => {
 
     const token = utils.generateJWT({ id: user._id, email: user.email });
 
-    const isProduction = config.NODE_ENV === "production" || (config.CLIENT_URL && config.CLIENT_URL.includes("vercel.app"));
+    const isProduction =
+      config.NODE_ENV === "production" ||
+      (config.CLIENT_URL && config.CLIENT_URL.includes("vercel.app"));
     const cookieOptions = {
       httpOnly: true,
       secure: isProduction,
@@ -36,11 +39,11 @@ export const googleAuthController = async (req, res) => {
 
     res.cookie("token", token, cookieOptions);
 
-    const redirectUrl = new URL(config.CLIENT_URL);
-    return res.redirect(redirectUrl.toString());
+    // Clean redirect to dashboard or home
+    return res.redirect(`${config.CLIENT_URL}/`);
   } catch (error) {
     console.error("Error in googleAuthController:", error);
-    return res.status(500).json({ success: false, message: "Internal server error during authentication." });
+    return res.redirect(`${config.CLIENT_URL}/login`);
   }
 };
 
@@ -169,5 +172,15 @@ export const getFriends = async (req, res) => {
   } catch (error) {
     console.error("Error in getFriends:", error);
     res.status(500).json({ success: false, message: "Server error fetching friends" });
+  }
+};
+
+export const getPendingRequests = async (req, res) => {
+  try {
+    const requests = await userDao.getPendingRequests(req.user.id);
+    res.status(200).json({ success: true, requests });
+  } catch (error) {
+    console.error("Error in getPendingRequests:", error);
+    res.status(500).json({ success: false, message: "Server error fetching pending requests" });
   }
 };

@@ -8,6 +8,8 @@ import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 
 const app = express();
 
+app.set("trust proxy", 1);
+
 const clientUrl = config.CLIENT_URL ? config.CLIENT_URL.replace(/\/$/, "") : "";
 
 app.use(

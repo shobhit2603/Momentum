@@ -9,7 +9,13 @@ export async function createNewUser(name, email) {
 }
 
 export async function getUserById(id) {
-  return await User.findById(id).populate("friends", "name email profilePicture streak");
+  const user = await User.findById(id).populate("friends", "name email profilePicture streak");
+  if (user && user.friends) {
+    const uniqueMap = new Map();
+    user.friends.forEach(f => uniqueMap.set(f._id.toString(), f));
+    user.friends = Array.from(uniqueMap.values());
+  }
+  return user;
 }
 
 export async function updateUserLastActive(id) {
@@ -43,7 +49,9 @@ export async function acceptFriendRequest(userId, requesterId) {
   if (!currentUser || !requesterUser) return false;
   if (!currentUser.friendRequests.includes(requesterId)) return false;
 
-  currentUser.friends.push(requesterId);
+  if (!currentUser.friends.includes(requesterId)) {
+    currentUser.friends.push(requesterId);
+  }
   currentUser.friendRequests = currentUser.friendRequests.filter(id => id.toString() !== requesterId);
   
   if (!requesterUser.friends.includes(userId)) {
@@ -57,9 +65,22 @@ export async function acceptFriendRequest(userId, requesterId) {
 
 export async function getFriends(userId) {
   const user = await User.findById(userId).populate("friends", "name email profilePicture streak lastActive");
-  return user ? user.friends : [];
+  if (!user || !user.friends) return [];
+  
+  const uniqueMap = new Map();
+  user.friends.forEach(f => uniqueMap.set(f._id.toString(), f));
+  return Array.from(uniqueMap.values());
 }
 
 export async function updateUserProfilePicture(id, profilePicture) {
   return await User.findByIdAndUpdate(id, { profilePicture }, { new: true });
+}
+
+export async function getPendingRequests(userId) {
+  const user = await User.findById(userId).populate("friendRequests", "name email profilePicture");
+  if (!user || !user.friendRequests) return [];
+  
+  const uniqueMap = new Map();
+  user.friendRequests.forEach(r => uniqueMap.set(r._id.toString(), r));
+  return Array.from(uniqueMap.values());
 }

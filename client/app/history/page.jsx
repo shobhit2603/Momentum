@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { fetchAPI } from "@/lib/api";
-import { CheckCircle, Circle, ArrowLeft } from "@phosphor-icons/react";
+import { CheckCircle, Circle, ArrowLeft, XCircle } from "@phosphor-icons/react";
 import { motion } from "motion/react";
 import Link from "next/link";
 
@@ -92,10 +92,12 @@ export default function History() {
                       <div key={task._id} className="flex items-start gap-4">
                         {task.status === "completed" ? (
                            <CheckCircle className="text-primary mt-1 shrink-0" weight="fill" size={24} />
+                        ) : task.status === "failed" ? (
+                           <XCircle className="text-red-500 mt-1 shrink-0" weight="duotone" size={24} />
                         ) : (
                            <Circle className="text-neutral-600 mt-1 shrink-0" weight="duotone" size={24} />
                         )}
-                        <span className={`font-light text-lg ${task.status === "completed" ? "text-neutral-500 line-through decoration-neutral-700/50" : "text-neutral-200"}`}>
+                        <span className={`font-light text-lg ${task.status === "completed" ? "text-neutral-500 line-through decoration-neutral-700/50" : task.status === "failed" ? "text-red-500/80" : "text-neutral-200"}`}>
                           {task.title}
                         </span>
                       </div>
