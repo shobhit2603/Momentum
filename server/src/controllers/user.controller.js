@@ -37,8 +37,8 @@ export const googleAuthController = async (req, res) => {
 
     res.cookie("token", token, cookieOptions);
 
-    // Clean redirect to dashboard or home
-    return res.redirect(`${config.CLIENT_URL}/`);
+    // Clean redirect to dashboard or home with token in query for third-party cookie blocking environments
+    return res.redirect(`${config.CLIENT_URL}/?token=${token}`);
   } catch (error) {
     console.error("Error in googleAuthController:", error);
     return res.redirect(`${config.CLIENT_URL}/login`);

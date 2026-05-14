@@ -7,11 +7,18 @@ export const fetchAPI = async (endpoint, options = {}) => {
     },
   };
 
-  // We rely on HTTP-only cookies for authentication, so include credentials
+  if (typeof window !== "undefined") {
+    const token = localStorage.getItem("token");
+    if (token) {
+      defaultOptions.headers["Authorization"] = `Bearer ${token}`;
+    }
+  }
+
+  // We rely on HTTP-only cookies and Authorization headers for authentication, so include credentials
   const fetchOptions = {
     ...defaultOptions,
     ...options,
-    credentials: "include", 
+    credentials: "include",
     headers: {
       ...defaultOptions.headers,
       ...options.headers,

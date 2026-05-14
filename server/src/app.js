@@ -14,7 +14,14 @@ const clientUrl = config.CLIENT_URL ? config.CLIENT_URL.replace(/\/$/, "") : "";
 
 app.use(
   cors({
-    origin: clientUrl,
+    origin: function (origin, callback) {
+      if (!origin || origin === clientUrl || process.env.NODE_ENV === "development") {
+        callback(null, origin || true);
+      } else {
+        // Fallback to allow if it's a vercel deploy preview or similar
+        callback(null, true);
+      }
+    },
     credentials: true,
   }),
 );

@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { fetchAPI } from "@/lib/api";
-import { 
-  SignOut, 
-  Fire, 
-  ChartLineUp, 
-  Target, 
-  Users, 
+import {
+  SignOut,
+  Fire,
+  ChartLineUp,
+  Target,
+  Users,
   ChatCircle,
   CalendarCheck,
   Lightning,
@@ -52,6 +52,7 @@ export default function Profile() {
   };
 
   const handleLogout = async () => {
+    localStorage.removeItem("token");
     await fetchAPI("/users/logout", { method: "POST" });
     window.location.href = "/";
   };
@@ -68,7 +69,7 @@ export default function Profile() {
   const completedTotal = history.filter(t => t.status === "completed").length;
   const totalTasks = history.length;
   const completionRate = totalTasks > 0 ? Math.round((completedTotal / totalTasks) * 100) : 0;
-  
+
   // Calculate average tasks per day from history
   const uniqueDays = new Set(history.map(t => new Date(t.date).toDateString())).size;
   const avgTasksPerDay = uniqueDays > 0 ? (completedTotal / uniqueDays).toFixed(1) : 0;
@@ -82,12 +83,12 @@ export default function Profile() {
           </h1>
           <p className="text-neutral-500 font-light text-lg">Your momentum at a glance.</p>
         </motion.div>
-        <motion.button 
+        <motion.button
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          onClick={handleLogout} 
+          onClick={handleLogout}
           className="p-3 bg-surface-hover border border-border text-red-400 hover:text-red-300 rounded-2xl transition-colors flex items-center gap-2 font-medium shadow-sm"
         >
           <SignOut size={20} weight="bold" />
@@ -97,13 +98,13 @@ export default function Profile() {
       {/* Main Top Section: Identity & Primary Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         {/* User Identity Card */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="md:col-span-2 glass-panel rounded-4xl p-8 flex flex-col sm:flex-row items-center sm:items-start gap-8 text-center sm:text-left relative overflow-hidden"
         >
           <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-[80px] pointer-events-none"></div>
-          
+
           <div className="relative group">
             <div className="w-28 h-28 rounded-full bg-surface-hover border-[3px] border-surface overflow-hidden shrink-0 shadow-2xl shadow-primary/20 relative z-10 transition-transform duration-500 group-hover:scale-105">
               {user.profilePicture ? (
@@ -117,11 +118,11 @@ export default function Profile() {
             {/* Pulsing ring behind avatar */}
             <div className="absolute inset-0 rounded-full border-2 border-primary/30 animate-ping opacity-20"></div>
           </div>
-          
+
           <div className="flex-1 z-10">
             <h2 className="text-3xl font-medium text-white tracking-tight mb-1">{user.name}</h2>
             <p className="text-neutral-400 font-light mb-6 bg-surface/50 inline-block px-3 py-1 rounded-full text-sm border border-border/50">{user.email}</p>
-            
+
             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4">
               <div className="bg-surface border border-border px-4 py-2 rounded-xl flex items-center gap-3 shadow-inner">
                 <Fire weight="fill" className="text-orange-400" size={24} />
@@ -142,7 +143,7 @@ export default function Profile() {
         </motion.div>
 
         {/* Completion Rate Card */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
@@ -153,7 +154,7 @@ export default function Profile() {
           <h3 className="text-5xl font-light text-white mb-2">{completionRate}<span className="text-2xl text-neutral-500">%</span></h3>
           <p className="text-xs uppercase tracking-widest text-neutral-500 font-bold">Win Rate</p>
           <div className="w-full h-1.5 bg-surface rounded-full mt-6 overflow-hidden">
-             <div className="h-full bg-primary" style={{ width: `${completionRate}%` }}></div>
+            <div className="h-full bg-primary" style={{ width: `${completionRate}%` }}></div>
           </div>
         </motion.div>
       </div>
@@ -165,7 +166,7 @@ export default function Profile() {
           <span className="text-2xl font-medium text-white mb-1">{completedTotal}</span>
           <span className="text-[10px] uppercase tracking-widest text-neutral-500 font-bold">Total Done</span>
         </motion.div>
-        
+
         <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }} className="glass-panel p-6 rounded-3xl flex flex-col hover:bg-surface-hover transition-colors">
           <CalendarCheck weight="duotone" className="text-purple-400 mb-3" size={28} />
           <span className="text-2xl font-medium text-white mb-1">{uniqueDays}</span>
@@ -233,11 +234,11 @@ export default function Profile() {
               </div>
             ) : (
               reviews.map((review, idx) => (
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.1 * idx }}
-                  key={review._id} 
+                  key={review._id}
                   className="glass-panel p-5 rounded-3xl flex gap-4 hover:bg-surface-hover transition-colors"
                 >
                   <div className="w-10 h-10 rounded-full overflow-hidden border border-border shrink-0 bg-surface">
@@ -262,14 +263,14 @@ export default function Profile() {
 
       {/* History CTA Banner */}
       <Link href="/history">
-        <motion.div 
+        <motion.div
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           className="relative overflow-hidden rounded-4xl group cursor-pointer border border-primary/20 shadow-[0_0_40px_rgba(157,78,221,0.1)] hover:shadow-[0_0_60px_rgba(157,78,221,0.2)] transition-all"
         >
           <div className="absolute inset-0 bg-linear-to-r from-primary/10 via-surface to-primary/5 z-0"></div>
           <div className="absolute top-0 right-0 w-64 h-64 bg-primary/20 rounded-full blur-[80px] pointer-events-none group-hover:bg-primary/30 transition-colors"></div>
-          
+
           <div className="relative z-10 p-10 flex flex-col sm:flex-row items-center justify-between gap-6">
             <div className="text-center sm:text-left">
               <h2 className="text-3xl font-light text-white mb-2 tracking-tight">Your Complete <span className="text-gradient font-medium">Legacy</span></h2>
