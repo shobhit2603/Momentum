@@ -26,16 +26,20 @@ export const googleAuthController = async (req, res) => {
 
     const token = utils.generateJWT({ id: user._id, email: user.email });
 
-    const isProduction =
-      config.NODE_ENV === "production" ||
-      (config.CLIENT_URL && config.CLIENT_URL.includes("vercel.app"));
+    const isProduction = config.NODE_ENV === "production";
     const cookieOptions = {
       httpOnly: true,
-      secure: isProduction,
-      sameSite: isProduction ? "none" : "lax",
+      secure: true, // Always use secure in production/deployed environments
+      sameSite: "none", // Required for cross-domain cookies (Vercel <-> Render)
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       path: "/",
     };
+
+    // If development (localhost), use lax and secure: false
+    if (config.NODE_ENV === "development") {
+      cookieOptions.secure = false;
+      cookieOptions.sameSite = "lax";
+    }
 
     res.cookie("token", token, cookieOptions);
 
@@ -81,12 +85,18 @@ export const getCurrentUser = async (req, res) => {
 
 export const logoutController = async (req, res) => {
   try {
-    const isProduction = config.NODE_ENV === "production" || (config.CLIENT_URL && config.CLIENT_URL.includes("vercel.app"));
+    const isProduction = config.NODE_ENV === "production";
     const cookieOptions = {
       httpOnly: true,
-      secure: isProduction,
-      sameSite: isProduction ? "none" : "lax",
+      secure: true,
+      sameSite: "none",
+      path: "/",
     };
+
+    if (config.NODE_ENV === "development") {
+      cookieOptions.secure = false;
+      cookieOptions.sameSite = "lax";
+    }
 
     res.clearCookie("token", cookieOptions);
     return res.status(200).json({ success: true, message: "Logged out successfully." });
