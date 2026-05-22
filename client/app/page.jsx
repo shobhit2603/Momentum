@@ -197,6 +197,21 @@ export default function Dashboard() {
     return <Circle size={28} weight="duotone" className="text-neutral-500 group-hover:text-primary transition-colors" />;
   };
 
+  const renderTaskItem = (task, size = 16, truncate = false) => (
+    <div key={task._id} className="flex items-start gap-2 text-sm">
+      {task.status === "completed" ? (
+        <CheckCircle className="text-primary mt-0.5 shrink-0" weight="fill" size={size} />
+      ) : task.status === "in progress" ? (
+        <CircleHalf className="text-primary mt-0.5 shrink-0 animate-pulse" weight="fill" size={size} />
+      ) : (
+        <Circle className="text-neutral-600 mt-0.5 shrink-0" weight="duotone" size={size} />
+      )}
+      <span className={`font-light ${truncate ? "truncate" : ""} ${task.status === "completed" ? "text-neutral-500 line-through decoration-neutral-700" : "text-neutral-300"}`}>
+        {task.title}
+      </span>
+    </div>
+  );
+
   return (
     <div className="max-w-4xl mx-auto px-6 py-12 min-h-screen relative grid grid-cols-1 lg:grid-cols-3 gap-8">
       
@@ -348,36 +363,10 @@ export default function Dashboard() {
                   <div className="space-y-2">
                     {expandedFriends.has(friend._id) ? (
                       // Show all tasks when expanded
-                      tasks.map(task => (
-                        <div key={task._id} className="flex items-start gap-2 text-sm">
-                          {task.status === "completed" ? (
-                             <CheckCircle className="text-primary mt-0.5 shrink-0" weight="fill" size={16} />
-                          ) : task.status === "in progress" ? (
-                             <CircleHalf className="text-primary mt-0.5 shrink-0 animate-pulse" weight="fill" size={16} />
-                          ) : (
-                             <Circle className="text-neutral-600 mt-0.5 shrink-0" weight="duotone" size={16} />
-                          )}
-                          <span className={`font-light truncate ${task.status === "completed" ? "text-neutral-500 line-through decoration-neutral-700" : "text-neutral-300"}`}>
-                            {task.title}
-                          </span>
-                        </div>
-                      ))
+                      tasks.map(task => renderTaskItem(task, 16, true))
                     ) : (
                       // Show only first 3 tasks when collapsed
-                      tasks.slice(0, 3).map(task => (
-                        <div key={task._id} className="flex items-start gap-2 text-sm">
-                          {task.status === "completed" ? (
-                             <CheckCircle className="text-primary mt-0.5 shrink-0" weight="fill" size={16} />
-                          ) : task.status === "in progress" ? (
-                             <CircleHalf className="text-primary mt-0.5 shrink-0 animate-pulse" weight="fill" size={16} />
-                          ) : (
-                             <Circle className="text-neutral-600 mt-0.5 shrink-0" weight="duotone" size={16} />
-                          )}
-                          <span className={`font-light truncate ${task.status === "completed" ? "text-neutral-500 line-through decoration-neutral-700" : "text-neutral-300"}`}>
-                            {task.title}
-                          </span>
-                        </div>
-                      ))
+                      tasks.slice(0, 3).map(task => renderTaskItem(task, 16, true))
                     )}
                     {tasks.length > 3 && (
                       <button 
