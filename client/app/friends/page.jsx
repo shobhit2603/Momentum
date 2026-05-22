@@ -16,11 +16,19 @@ export default function FriendsFeed() {
   const [reviewContent, setReviewContent] = useState("");
   const [expandedFriends, setExpandedFriends] = useState(new Set());
 
-  useEffect(() => {
-    loadFriends();
-    loadPendingRequests();
-    loadFriendsTasks();
-  }, []);
+  const loadPendingRequests = async () => {
+    const { status, data } = await fetchAPI("/users/friend-requests");
+    if (status === 200 && data.success) {
+      setPendingRequests(data.requests || []);
+    }
+  };
+
+  const loadFriends = async () => {
+    const { status, data } = await fetchAPI("/users/friends");
+    if (status === 200 && data.success) {
+      setFriends(data.friends || []);
+    }
+  };
 
   const loadFriendsTasks = async () => {
     const { status, data } = await fetchAPI("/tasks/friends/today");
@@ -40,19 +48,11 @@ export default function FriendsFeed() {
     }
   };
 
-  const loadPendingRequests = async () => {
-    const { status, data } = await fetchAPI("/users/friend-requests");
-    if (status === 200 && data.success) {
-      setPendingRequests(data.requests || []);
-    }
-  };
-
-  const loadFriends = async () => {
-    const { status, data } = await fetchAPI("/users/friends");
-    if (status === 200 && data.success) {
-      setFriends(data.friends || []);
-    }
-  };
+  useEffect(() => {
+    loadFriends();
+    loadPendingRequests();
+    loadFriendsTasks();
+  }, []);
 
   const handleSearch = async (e) => {
     e.preventDefault();
