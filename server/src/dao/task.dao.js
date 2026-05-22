@@ -35,3 +35,9 @@ export const getTasksForUsersByDateRange = async (userIds, start, end) => {
     .populate("userId", "name profilePicture streak")
     .sort({ createdAt: -1 });
 };
+
+export const deleteTask = async (userId, taskId) => {
+  return await Task.findOneAndDelete(
+    { _id: taskId, userId },
+  );
+};

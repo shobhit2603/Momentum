@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { CheckCircle, Circle, CircleHalf, Microphone, Plus, WarningCircle, Fire, CaretDown } from "@phosphor-icons/react";
+import { CheckCircle, Circle, CircleHalf, Microphone, Plus, WarningCircle, Fire, CaretDown, Trash } from "@phosphor-icons/react";
 import { motion, AnimatePresence } from "motion/react";
 import { fetchAPI } from "@/lib/api";
 import { renderTaskItem } from "@/lib/taskRenderer";
@@ -137,6 +137,19 @@ export default function Dashboard() {
       }
       return newSet;
     });
+  };
+
+  const deleteTask = async (taskId, e) => {
+    e.stopPropagation();
+    if (!confirm("Are you sure you want to delete this task?")) return;
+    
+    const { status } = await fetchAPI(`/tasks/${taskId}`, {
+      method: "DELETE"
+    });
+    
+    if (status === 200) {
+      setTasks(prev => prev.filter(t => t._id !== taskId));
+    }
   };
 
   const stopListening = () => {
@@ -303,6 +316,13 @@ export default function Dashboard() {
                   <span className={`flex-1 text-lg font-light transition-all duration-300 ${task.status === "completed" ? "text-neutral-500 line-through decoration-neutral-600" : "text-white"}`}>
                     {task.title}
                   </span>
+                  <button
+                    onClick={(e) => deleteTask(task._id, e)}
+                    className="ml-3 p-2 text-neutral-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500/10 rounded-lg"
+                    title="Delete task"
+                  >
+                    <Trash size={20} weight="bold" />
+                  </button>
                 </motion.div>
               ))
             )}
