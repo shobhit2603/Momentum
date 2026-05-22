@@ -254,7 +254,7 @@ export default function FriendsFeed() {
                  </div>
                  <div className="text-right flex flex-col">
                     <span className="text-[10px] uppercase tracking-widest text-neutral-500 font-bold mb-1">Tasks</span>
-                    <p className="text-primary font-medium text-sm">{friendsTasks[friend._id]?.length || 0} Active</p>
+                    <p className="text-primary font-medium text-sm">{friendsTasks[friend._id]?.length || 0} {!friendsTasks[friend._id] || friendsTasks[friend._id].length === 0 ? "tasks" : friendsTasks[friend._id].length === 1 ? "task" : "tasks"}</p>
                  </div>
               </div>
 
