@@ -1,23 +1,44 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { UserPlus, ChatTeardropText, PaperPlaneRight, Fire, Smiley, Check } from "@phosphor-icons/react";
+import { UserPlus, ChatTeardropText, PaperPlaneRight, Fire, Smiley, Check, CheckCircle, Circle, CircleHalf, CaretDown } from "@phosphor-icons/react";
 import { fetchAPI } from "@/lib/api";
 import { motion, AnimatePresence } from "motion/react";
 
 export default function FriendsFeed() {
   const [friends, setFriends] = useState([]);
+  const [friendsTasks, setFriendsTasks] = useState({});
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [pendingRequests, setPendingRequests] = useState([]);
   const [sentRequests, setSentRequests] = useState(new Set());
   const [activeReviewFriend, setActiveReviewFriend] = useState(null);
   const [reviewContent, setReviewContent] = useState("");
+  const [expandedFriends, setExpandedFriends] = useState(new Set());
 
   useEffect(() => {
     loadFriends();
     loadPendingRequests();
+    loadFriendsTasks();
   }, []);
+
+  const loadFriendsTasks = async () => {
+    const { status, data } = await fetchAPI("/tasks/friends/today");
+    if (status === 200 && data.success) {
+      // Group tasks by friend ID
+      const grouped = {};
+      data.tasks.forEach(task => {
+        const friendId = task.userId?._id;
+        if (friendId) {
+          if (!grouped[friendId]) {
+            grouped[friendId] = [];
+          }
+          grouped[friendId].push(task);
+        }
+      });
+      setFriendsTasks(grouped);
+    }
+  };
 
   const loadPendingRequests = async () => {
     const { status, data } = await fetchAPI("/users/friend-requests");
@@ -85,6 +106,18 @@ export default function FriendsFeed() {
       setActiveReviewFriend(null);
       // Optional toast
     }
+  };
+
+  const toggleFriendExpanded = (friendId) => {
+    setExpandedFriends(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(friendId)) {
+        newSet.delete(friendId);
+      } else {
+        newSet.add(friendId);
+      }
+      return newSet;
+    });
   };
 
   return (
@@ -213,16 +246,70 @@ export default function FriendsFeed() {
               </div>
 
               {/* Minimal Progress visual */}
-              <div className="bg-surface/50 p-4 rounded-2xl flex justify-between items-center border border-border/50">
+              <div className="bg-surface/50 p-4 rounded-2xl flex justify-between items-center border border-border/50 mb-4">
                  <div className="flex flex-col">
                     <span className="text-[10px] uppercase tracking-widest text-neutral-500 font-bold mb-1">Status</span>
                     <p className="text-white font-light text-sm">Working hard...</p>
                  </div>
                  <div className="text-right flex flex-col">
                     <span className="text-[10px] uppercase tracking-widest text-neutral-500 font-bold mb-1">Tasks</span>
-                    <p className="text-primary font-medium text-sm">Active</p>
+                    <p className="text-primary font-medium text-sm">{friendsTasks[friend._id]?.length || 0} Active</p>
                  </div>
               </div>
+
+              {/* Tasks Section */}
+              {friendsTasks[friend._id] && friendsTasks[friend._id].length > 0 && (
+                <div className="bg-surface/30 p-4 rounded-2xl border border-border/50 mb-4">
+                  <div className="space-y-2">
+                    {expandedFriends.has(friend._id) ? (
+                      // Show all tasks when expanded
+                      friendsTasks[friend._id].map(task => (
+                        <div key={task._id} className="flex items-start gap-2 text-sm">
+                          {task.status === "completed" ? (
+                             <CheckCircle className="text-primary mt-0.5 shrink-0" weight="fill" size={16} />
+                          ) : task.status === "in progress" ? (
+                             <CircleHalf className="text-primary mt-0.5 shrink-0 animate-pulse" weight="fill" size={16} />
+                          ) : (
+                             <Circle className="text-neutral-600 mt-0.5 shrink-0" weight="duotone" size={16} />
+                          )}
+                          <span className={`font-light ${task.status === "completed" ? "text-neutral-500 line-through decoration-neutral-700" : "text-neutral-300"}`}>
+                            {task.title}
+                          </span>
+                        </div>
+                      ))
+                    ) : (
+                      // Show only first 3 tasks when collapsed
+                      friendsTasks[friend._id].slice(0, 3).map(task => (
+                        <div key={task._id} className="flex items-start gap-2 text-sm">
+                          {task.status === "completed" ? (
+                             <CheckCircle className="text-primary mt-0.5 shrink-0" weight="fill" size={16} />
+                          ) : task.status === "in progress" ? (
+                             <CircleHalf className="text-primary mt-0.5 shrink-0 animate-pulse" weight="fill" size={16} />
+                          ) : (
+                             <Circle className="text-neutral-600 mt-0.5 shrink-0" weight="duotone" size={16} />
+                          )}
+                          <span className={`font-light ${task.status === "completed" ? "text-neutral-500 line-through decoration-neutral-700" : "text-neutral-300"}`}>
+                            {task.title}
+                          </span>
+                        </div>
+                      ))
+                    )}
+                    {friendsTasks[friend._id].length > 3 && (
+                      <button 
+                        onClick={() => toggleFriendExpanded(friend._id)}
+                        className="text-xs text-primary font-medium pl-6 pt-1 hover:opacity-80 transition-opacity flex items-center gap-1"
+                      >
+                        {expandedFriends.has(friend._id) ? "Show less" : `+${friendsTasks[friend._id].length - 3} more`}
+                        <CaretDown 
+                          size={12} 
+                          weight="fill" 
+                          className={`transition-transform ${expandedFriends.has(friend._id) ? "rotate-180" : ""}`}
+                        />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
 
               <AnimatePresence>
                 {activeReviewFriend === friend._id && (

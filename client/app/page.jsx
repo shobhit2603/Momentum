@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { CheckCircle, Circle, CircleHalf, Microphone, Plus, WarningCircle, Fire } from "@phosphor-icons/react";
+import { CheckCircle, Circle, CircleHalf, Microphone, Plus, WarningCircle, Fire, CaretDown } from "@phosphor-icons/react";
 import { motion, AnimatePresence } from "motion/react";
 import { fetchAPI } from "@/lib/api";
 
@@ -12,6 +12,7 @@ export default function Dashboard() {
   const [isListening, setIsListening] = useState(false);
   const [timeLeft, setTimeLeft] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
+  const [expandedFriends, setExpandedFriends] = useState(new Set());
 
   const recognitionRef = useRef(null);
 
@@ -122,6 +123,18 @@ export default function Dashboard() {
     await fetchAPI(`/tasks/${taskId}/status`, {
       method: "PATCH",
       body: JSON.stringify({ status: newStatus })
+    });
+  };
+
+  const toggleFriendExpanded = (friendId) => {
+    setExpandedFriends(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(friendId)) {
+        newSet.delete(friendId);
+      } else {
+        newSet.add(friendId);
+      }
+      return newSet;
     });
   };
 
@@ -333,24 +346,51 @@ export default function Dashboard() {
                   </div>
                   
                   <div className="space-y-2">
-                    {tasks.slice(0, 3).map(task => (
-                      <div key={task._id} className="flex items-start gap-2 text-sm">
-                        {task.status === "completed" ? (
-                           <CheckCircle className="text-primary mt-0.5 shrink-0" weight="fill" size={16} />
-                        ) : task.status === "in progress" ? (
-                           <CircleHalf className="text-primary mt-0.5 shrink-0 animate-pulse" weight="fill" size={16} />
-                        ) : (
-                           <Circle className="text-neutral-600 mt-0.5 shrink-0" weight="duotone" size={16} />
-                        )}
-                        <span className={`font-light truncate ${task.status === "completed" ? "text-neutral-500 line-through decoration-neutral-700" : "text-neutral-300"}`}>
-                          {task.title}
-                        </span>
-                      </div>
-                    ))}
+                    {expandedFriends.has(friend._id) ? (
+                      // Show all tasks when expanded
+                      tasks.map(task => (
+                        <div key={task._id} className="flex items-start gap-2 text-sm">
+                          {task.status === "completed" ? (
+                             <CheckCircle className="text-primary mt-0.5 shrink-0" weight="fill" size={16} />
+                          ) : task.status === "in progress" ? (
+                             <CircleHalf className="text-primary mt-0.5 shrink-0 animate-pulse" weight="fill" size={16} />
+                          ) : (
+                             <Circle className="text-neutral-600 mt-0.5 shrink-0" weight="duotone" size={16} />
+                          )}
+                          <span className={`font-light truncate ${task.status === "completed" ? "text-neutral-500 line-through decoration-neutral-700" : "text-neutral-300"}`}>
+                            {task.title}
+                          </span>
+                        </div>
+                      ))
+                    ) : (
+                      // Show only first 3 tasks when collapsed
+                      tasks.slice(0, 3).map(task => (
+                        <div key={task._id} className="flex items-start gap-2 text-sm">
+                          {task.status === "completed" ? (
+                             <CheckCircle className="text-primary mt-0.5 shrink-0" weight="fill" size={16} />
+                          ) : task.status === "in progress" ? (
+                             <CircleHalf className="text-primary mt-0.5 shrink-0 animate-pulse" weight="fill" size={16} />
+                          ) : (
+                             <Circle className="text-neutral-600 mt-0.5 shrink-0" weight="duotone" size={16} />
+                          )}
+                          <span className={`font-light truncate ${task.status === "completed" ? "text-neutral-500 line-through decoration-neutral-700" : "text-neutral-300"}`}>
+                            {task.title}
+                          </span>
+                        </div>
+                      ))
+                    )}
                     {tasks.length > 3 && (
-                      <div className="text-xs text-neutral-500 font-medium pl-6 pt-1">
-                        +{tasks.length - 3} more
-                      </div>
+                      <button 
+                        onClick={() => toggleFriendExpanded(friend._id)}
+                        className="text-xs text-primary font-medium pl-6 pt-1 hover:opacity-80 transition-opacity flex items-center gap-1"
+                      >
+                        {expandedFriends.has(friend._id) ? "Show less" : `+${tasks.length - 3} more`}
+                        <CaretDown 
+                          size={12} 
+                          weight="fill" 
+                          className={`transition-transform ${expandedFriends.has(friend._id) ? "rotate-180" : ""}`}
+                        />
+                      </button>
                     )}
                   </div>
                 </div>
