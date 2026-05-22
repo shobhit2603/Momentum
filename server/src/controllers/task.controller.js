@@ -153,7 +153,7 @@ export const deleteTask = async (req, res) => {
   try {
     const { taskId } = req.params;
 
-    const task = await taskDao.deleteTask(req.user.id, taskId);
+    const task = await taskDao.deleteTaskById(req.user.id, taskId);
 
     if (!task) {
       return res

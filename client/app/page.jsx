@@ -14,6 +14,7 @@ export default function Dashboard() {
   const [timeLeft, setTimeLeft] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [expandedFriends, setExpandedFriends] = useState(new Set());
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
 
   const recognitionRef = useRef(null);
 
@@ -139,17 +140,32 @@ export default function Dashboard() {
     });
   };
 
-  const deleteTask = async (taskId, e) => {
-    e.stopPropagation();
-    if (!confirm("Are you sure you want to delete this task?")) return;
-    
-    const { status } = await fetchAPI(`/tasks/${taskId}`, {
-      method: "DELETE"
-    });
-    
-    if (status === 200) {
-      setTasks(prev => prev.filter(t => t._id !== taskId));
+  const showError = (message) => {
+    setErrorMsg(message);
+    setTimeout(() => setErrorMsg(""), 5000);
+  };
+
+  const performDeleteTask = async (taskId) => {
+    try {
+      const { status, data } = await fetchAPI(`/tasks/${taskId}`, {
+        method: "DELETE"
+      });
+      
+      if (status === 200 && data.success) {
+        setTasks(prev => prev.filter(t => t._id !== taskId));
+      } else {
+        showError("Failed to delete task. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error deleting task:", error);
+      showError("Failed to delete task. Please try again.");
     }
+    setDeleteConfirm(null);
+  };
+
+  const deleteTask = (taskId, e) => {
+    e.stopPropagation();
+    setDeleteConfirm(taskId);
   };
 
   const stopListening = () => {
@@ -225,6 +241,44 @@ export default function Dashboard() {
           >
             <WarningCircle size={20} weight="fill" />
             {errorMsg}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {deleteConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center"
+            onClick={() => setDeleteConfirm(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="glass-panel border border-border rounded-2xl p-6 max-w-sm mx-4"
+            >
+              <h3 className="text-lg font-medium text-white mb-2">Delete Task?</h3>
+              <p className="text-neutral-400 text-sm mb-6">This action cannot be undone. Are you sure you want to delete this task?</p>
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => setDeleteConfirm(null)}
+                  className="px-4 py-2 rounded-lg text-neutral-300 hover:bg-surface transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => performDeleteTask(deleteConfirm)}
+                  className="px-4 py-2 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors font-medium"
+                >
+                  Delete
+                </button>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

@@ -36,7 +36,7 @@ export const getTasksForUsersByDateRange = async (userIds, start, end) => {
     .sort({ createdAt: -1 });
 };
 
-export const deleteTask = async (userId, taskId) => {
+export const deleteTaskById = async (userId, taskId) => {
   return await Task.findOneAndDelete(
     { _id: taskId, userId },
   );
