@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { UserPlus, ChatTeardropText, PaperPlaneRight, Fire, Smiley, Check, CheckCircle, Circle, CircleHalf, CaretDown } from "@phosphor-icons/react";
+import { UserPlus, ChatTeardropText, PaperPlaneRight, Fire, Smiley, Check, CaretDown } from "@phosphor-icons/react";
 import { fetchAPI } from "@/lib/api";
 import { motion, AnimatePresence } from "motion/react";
+import { renderTaskItem } from "@/lib/taskRenderer";
 
 export default function FriendsFeed() {
   const [friends, setFriends] = useState([]);
@@ -119,21 +120,6 @@ export default function FriendsFeed() {
       return newSet;
     });
   };
-
-  const renderTaskItem = (task, size = 16) => (
-    <div key={task._id} className="flex items-start gap-2 text-sm">
-      {task.status === "completed" ? (
-        <CheckCircle className="text-primary mt-0.5 shrink-0" weight="fill" size={size} />
-      ) : task.status === "in progress" ? (
-        <CircleHalf className="text-primary mt-0.5 shrink-0 animate-pulse" weight="fill" size={size} />
-      ) : (
-        <Circle className="text-neutral-600 mt-0.5 shrink-0" weight="duotone" size={size} />
-      )}
-      <span className={`font-light truncate ${task.status === "completed" ? "text-neutral-500 line-through decoration-neutral-700" : "text-neutral-300"}`}>
-        {task.title}
-      </span>
-    </div>
-  );
 
   return (
     <div className="max-w-2xl mx-auto px-6 py-12 min-h-screen">
@@ -278,10 +264,10 @@ export default function FriendsFeed() {
                   <div className="space-y-2">
                     {expandedFriends.has(friend._id) ? (
                       // Show all tasks when expanded
-                      friendsTasks[friend._id].map(task => renderTaskItem(task, 16))
+                      friendsTasks[friend._id].map(task => renderTaskItem(task))
                     ) : (
                       // Show only first 3 tasks when collapsed
-                      friendsTasks[friend._id].slice(0, 3).map(task => renderTaskItem(task, 16))
+                      friendsTasks[friend._id].slice(0, 3).map(task => renderTaskItem(task))
                     )}
                     {friendsTasks[friend._id].length > 3 && (
                       <button 
