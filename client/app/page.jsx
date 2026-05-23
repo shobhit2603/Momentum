@@ -252,7 +252,7 @@ export default function Dashboard() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center"
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
             onClick={() => setDeleteConfirm(null)}
           >
             <motion.div
@@ -260,14 +260,14 @@ export default function Dashboard() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="glass-panel border border-border rounded-2xl p-6 max-w-sm mx-4"
+              className="glass-panel border border-border rounded-2xl p-4 md:p-6 max-w-sm w-full"
             >
-              <h3 className="text-lg font-medium text-white mb-2">Delete Task?</h3>
+              <h3 className="text-lg md:text-xl font-medium text-white mb-2">Delete Task?</h3>
               <p className="text-neutral-400 text-sm mb-6">This action cannot be undone. Are you sure you want to delete this task?</p>
-              <div className="flex gap-3 justify-end">
+              <div className="flex gap-2 md:gap-3 justify-end flex-col-reverse md:flex-row">
                 <button
                   onClick={() => setDeleteConfirm(null)}
-                  className="px-4 py-2 rounded-lg text-neutral-300 hover:bg-surface transition-colors"
+                  className="px-4 py-2 rounded-lg text-neutral-300 hover:bg-surface transition-colors font-medium"
                 >
                   Cancel
                 </button>
@@ -358,24 +358,24 @@ export default function Dashboard() {
                   whileHover={{ scale: 1.01 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => toggleTask(task._id, task.status)}
-                  className={`group flex items-center p-5 rounded-2xl cursor-pointer transition-all ${
+                  className={`group flex items-center gap-2 md:gap-3 p-3 md:p-5 rounded-2xl cursor-pointer transition-all ${
                     task.status === "completed" 
                       ? "bg-surface/30 border border-transparent opacity-60" 
                       : "glass-panel hover:bg-surface-hover"
                   }`}
                 >
-                  <div className="mr-5 shrink-0 transition-transform group-hover:scale-110">
+                  <div className="mr-2 md:mr-5 shrink-0 transition-transform group-hover:scale-110">
                     {renderTaskIcon(task.status)}
                   </div>
-                  <span className={`flex-1 text-lg font-light transition-all duration-300 ${task.status === "completed" ? "text-neutral-500 line-through decoration-neutral-600" : "text-white"}`}>
+                  <span className={`flex-1 text-base md:text-lg font-light transition-all duration-300 break-words ${task.status === "completed" ? "text-neutral-500 line-through decoration-neutral-600" : "text-white"}`}>
                     {task.title}
                   </span>
                   <button
                     onClick={(e) => deleteTask(task._id, e)}
-                    className="ml-3 p-2 text-neutral-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500/10 rounded-lg"
+                    className="shrink-0 p-2 md:p-2 text-neutral-500 hover:text-red-400 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-all hover:bg-red-500/10 rounded-lg"
                     title="Delete task"
                   >
-                    <Trash size={20} weight="bold" />
+                    <Trash size={18} weight="bold" className="md:w-5 md:h-5" />
                   </button>
                 </motion.div>
               ))
