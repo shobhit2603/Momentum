@@ -3,19 +3,30 @@
 import { useEffect, useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { fetchAPI } from "@/lib/api";
+import { useToast } from "@/components/ToastProvider";
 
 export default function AuthWrapper({ children }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [isAuthenticated, setIsAuthenticated] = useState(null);
+  const { addToast } = useToast();
 
   useEffect(() => {
     const checkAuth = async () => {
       // Check if token is in the URL (from Google redirect)
-      const urlToken = searchParams.get("token");
+      const urlToken = searchParams.get("token")
+        || (typeof window !== "undefined"
+          ? new URLSearchParams(window.location.search).get("token")
+          : null);
       if (urlToken) {
         localStorage.setItem("token", urlToken);
+        window.dispatchEvent(new Event("momentum:token"));
+        addToast({
+          type: "success",
+          title: "Login successful",
+          message: "Welcome back to Momentum.",
+        });
         // Clean up the URL
         router.replace(pathname);
       }
@@ -36,7 +47,7 @@ export default function AuthWrapper({ children }) {
     };
 
     checkAuth();
-  }, [pathname, router]);
+  }, [pathname, router, searchParams, addToast]);
 
   // Loading state
   if (isAuthenticated === null && pathname !== "/login") {

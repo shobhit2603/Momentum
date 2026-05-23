@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { fetchAPI } from "@/lib/api";
 import {
   SignOut,
@@ -16,6 +16,7 @@ import {
 import { motion } from "motion/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useSocket } from "@/components/SocketProvider";
 
 export default function Profile() {
   const [user, setUser] = useState(null);
@@ -23,6 +24,7 @@ export default function Profile() {
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const { lastReview } = useSocket();
 
   useEffect(() => {
     let isMounted = true;
@@ -53,6 +55,19 @@ export default function Profile() {
     fetchData();
     return () => { isMounted = false; };
   }, []);
+
+  const effectiveReviews = useMemo(() => {
+    if (!lastReview?.review || !user?._id) return reviews;
+    if (lastReview.revieweeId?.toString() !== user._id.toString()) return reviews;
+
+    const existingIndex = reviews.findIndex((review) => review._id === lastReview.review._id);
+    if (existingIndex >= 0) {
+      const updated = [...reviews];
+      updated[existingIndex] = lastReview.review;
+      return updated;
+    }
+    return [lastReview.review, ...reviews];
+  }, [lastReview, reviews, user]);
 
   async function handleLogout() {
     localStorage.removeItem("token");
@@ -181,7 +196,7 @@ export default function Profile() {
 
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3 }} className="bg-surface/40 backdrop-blur-xl border border-white/5 p-5 rounded-3xl flex flex-col hover:border-primary/20 transition-all">
           <ChatCircle weight="duotone" className="text-pink-400/70 mb-2" size={24} />
-          <span className="text-xl font-medium text-white mb-1">{reviews.length}</span>
+          <span className="text-xl font-medium text-white mb-1">{effectiveReviews.length}</span>
           <span className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">Today&apos;s Feedback</span>
         </motion.div>
       </div>
@@ -239,12 +254,12 @@ export default function Profile() {
             Feedback Received Today
           </h3>
           <div className="space-y-3">
-            {reviews.length === 0 ? (
+            {effectiveReviews.length === 0 ? (
               <div className="bg-background/50 rounded-2xl p-6 text-center text-neutral-500 font-light border border-border text-sm">
                 No roasts or toasts today.
               </div>
             ) : (
-              reviews.map((review, idx) => (
+              effectiveReviews.map((review, idx) => (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}

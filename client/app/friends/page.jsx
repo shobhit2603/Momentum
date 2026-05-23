@@ -6,6 +6,7 @@ import { fetchAPI } from "@/lib/api";
 import { motion, AnimatePresence } from "motion/react";
 import { renderTaskItem } from "@/lib/taskRenderer";
 import Link from "next/link";
+import { useToast } from "@/components/ToastProvider";
 
 const formatTimeAgo = (dateValue) => {
   if (!dateValue) return null;
@@ -82,6 +83,7 @@ export default function FriendsFeed() {
   const [activeReviewFriend, setActiveReviewFriend] = useState(null);
   const [reviewContent, setReviewContent] = useState("");
   const [expandedFriends, setExpandedFriends] = useState(new Set());
+  const { addToast } = useToast();
 
   const loadPendingRequests = async () => {
     const { status, data } = await fetchAPI("/users/friend-requests");
@@ -154,8 +156,9 @@ export default function FriendsFeed() {
     });
     if (status === 200) {
       setSentRequests(prev => new Set(prev).add(userId));
+      addToast({ type: "success", title: "Request sent", message: "Waiting for them to accept." });
     } else {
-      alert(data?.message || "Failed to send request.");
+      addToast({ type: "error", title: "Request failed", message: data?.message || "Failed to send request." });
     }
   };
 
@@ -176,8 +179,9 @@ export default function FriendsFeed() {
       if (requestsRes.status === 200 && requestsRes.data.success) {
         setPendingRequests(requestsRes.data.requests || []);
       }
+      addToast({ type: "success", title: "Friend added", message: "Your squad just grew." });
     } else {
-      alert(data?.message || "Failed to accept request.");
+      addToast({ type: "error", title: "Could not accept", message: data?.message || "Failed to accept request." });
     }
   };
 
@@ -185,7 +189,7 @@ export default function FriendsFeed() {
     e.preventDefault();
     if (!reviewContent.trim() || !activeReviewFriend) return;
     
-    const { status } = await fetchAPI("/reviews", {
+    const { status, data } = await fetchAPI("/reviews", {
       method: "POST",
       body: JSON.stringify({
         revieweeId: activeReviewFriend,
@@ -196,7 +200,13 @@ export default function FriendsFeed() {
     if (status === 201 || status === 200) {
       setReviewContent("");
       setActiveReviewFriend(null);
-      // Optional toast
+      addToast({
+        type: "success",
+        title: "Roast delivered",
+        message: status === 200 ? "You updated your feedback." : "Your friend just got a wake-up call.",
+      });
+    } else {
+      addToast({ type: "error", title: "Roast failed", message: data?.message || "Unable to send feedback." });
     }
   };
 

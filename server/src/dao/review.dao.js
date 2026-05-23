@@ -13,6 +13,10 @@ export const createReview = async (reviewerId, revieweeId, content) => {
   return await newReview.save();
 };
 
+export const getReviewById = async (id) => {
+  return await Review.findById(id).populate("reviewerId", "name profilePicture");
+};
+
 export const getReviewsForUserByDateRange = async (revieweeId, start, end) => {
   return await Review.find({
     revieweeId,

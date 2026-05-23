@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { CheckCircle, Circle, CircleHalf, Microphone, Plus, WarningCircle, Fire, CaretDown, Trash } from "@phosphor-icons/react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { CheckCircle, Circle, CircleHalf, Microphone, Plus, Fire, CaretDown, Trash } from "@phosphor-icons/react";
 import { motion, AnimatePresence } from "motion/react";
 import { fetchAPI } from "@/lib/api";
 import { renderTaskItem } from "@/lib/taskRenderer";
+import { useToast } from "@/components/ToastProvider";
 
 export default function Dashboard() {
   const [tasks, setTasks] = useState([]);
@@ -12,49 +13,11 @@ export default function Dashboard() {
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [isListening, setIsListening] = useState(false);
   const [timeLeft, setTimeLeft] = useState("");
-  const [errorMsg, setErrorMsg] = useState("");
   const [expandedFriends, setExpandedFriends] = useState(new Set());
   const [deleteConfirm, setDeleteConfirm] = useState(null);
 
   const recognitionRef = useRef(null);
-
-  useEffect(() => {
-    loadTasks();
-    loadFriendsTasks();
-    
-    if (typeof window !== "undefined" && ("SpeechRecognition" in window || "webkitSpeechRecognition" in window)) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = true;
-      recognitionRef.current.interimResults = false;
-      recognitionRef.current.lang = 'en-US';
-
-      recognitionRef.current.onresult = (event) => {
-        const transcript = event.results[event.results.length - 1][0].transcript;
-        if (transcript) {
-          handleVoiceSubmit(transcript);
-        }
-        stopListening();
-      };
-
-      recognitionRef.current.onerror = (event) => {
-        console.error("Speech recognition error:", event.error);
-        stopListening();
-        if (event.error === 'network') {
-          setErrorMsg("Voice search unavailable locally without HTTPS. Try typing instead.");
-        } else if (event.error === 'not-allowed') {
-          setErrorMsg("Microphone access denied.");
-        } else {
-          setErrorMsg(`Voice recognition failed: ${event.error}`);
-        }
-        setTimeout(() => setErrorMsg(""), 5000);
-      };
-
-      recognitionRef.current.onend = () => {
-        setIsListening(false);
-      };
-    }
-  }, []);
+  const { addToast } = useToast();
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -87,15 +50,65 @@ export default function Dashboard() {
     }
   }
 
-  async function handleVoiceSubmit(text) {
-    const { status, data } = await fetchAPI("/tasks", {
-      method: "POST",
-      body: JSON.stringify({ title: text })
-    });
-    if (status === 201 && data.success) {
-      setTasks(prev => [data.task, ...prev]);
+  const showError = useCallback(
+    (message) => {
+      addToast({ type: "error", title: "Heads up", message });
+    },
+    [addToast],
+  );
+
+  const handleVoiceSubmit = useCallback(
+    async (text) => {
+      const { status, data } = await fetchAPI("/tasks", {
+        method: "POST",
+        body: JSON.stringify({ title: text })
+      });
+      if (status === 201 && data.success) {
+        setTasks(prev => [data.task, ...prev]);
+        addToast({ type: "success", title: "Task added", message: "Captured from voice." });
+      } else {
+        showError(data?.message || "Unable to add task right now.");
+      }
+    },
+    [addToast, showError],
+  );
+
+  useEffect(() => {
+    loadTasks();
+    loadFriendsTasks();
+    
+    if (typeof window !== "undefined" && ("SpeechRecognition" in window || "webkitSpeechRecognition" in window)) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = true;
+      recognitionRef.current.interimResults = false;
+      recognitionRef.current.lang = 'en-US';
+
+      recognitionRef.current.onresult = (event) => {
+        const transcript = event.results[event.results.length - 1][0].transcript;
+        if (transcript) {
+          handleVoiceSubmit(transcript);
+        }
+        stopListening();
+      };
+
+      recognitionRef.current.onerror = (event) => {
+        console.error("Speech recognition error:", event.error);
+        stopListening();
+        if (event.error === 'network') {
+          showError("Voice search unavailable locally without HTTPS. Try typing instead.");
+        } else if (event.error === 'not-allowed') {
+          showError("Microphone access denied.");
+        } else {
+          showError(`Voice recognition failed: ${event.error}`);
+        }
+      };
+
+      recognitionRef.current.onend = () => {
+        setIsListening(false);
+      };
     }
-  }
+  }, [handleVoiceSubmit, showError]);
 
   async function handleManualSubmit(e) {
     e.preventDefault();
@@ -107,6 +120,9 @@ export default function Dashboard() {
     if (status === 201 && data.success) {
       setTasks(prev => [data.task, ...prev]);
       setNewTaskTitle("");
+      addToast({ type: "success", title: "Task added", message: "Momentum saved." });
+    } else {
+      showError(data?.message || "Unable to add task right now.");
     }
   }
 
@@ -122,10 +138,24 @@ export default function Dashboard() {
       window.navigator.vibrate(50);
     }
 
-    await fetchAPI(`/tasks/${taskId}/status`, {
+    const { status } = await fetchAPI(`/tasks/${taskId}/status`, {
       method: "PATCH",
       body: JSON.stringify({ status: newStatus })
     });
+
+    if (status !== 200) {
+      setTasks(prev => prev.map(t => t._id === taskId ? { ...t, status: currentStatus } : t));
+      showError("Failed to update task status.");
+      return;
+    }
+
+    if (newStatus === "in progress") {
+      addToast({ type: "info", title: "In progress", message: "Keep the momentum going." });
+    } else if (newStatus === "completed") {
+      addToast({ type: "success", title: "Task completed", message: "Nice work finishing it." });
+    } else {
+      addToast({ type: "warning", title: "Task reset", message: "Back to not started." });
+    }
   }
 
   function toggleFriendExpanded(friendId) {
@@ -140,11 +170,6 @@ export default function Dashboard() {
     });
   }
 
-  function showError(message) {
-    setErrorMsg(message);
-    setTimeout(() => setErrorMsg(""), 5000);
-  }
-
   async function performDeleteTask(taskId) {
     try {
       const { status, data } = await fetchAPI(`/tasks/${taskId}`, {
@@ -153,6 +178,7 @@ export default function Dashboard() {
       
       if (status === 200 && data.success) {
         setTasks(prev => prev.filter(t => t._id !== taskId));
+        addToast({ type: "success", title: "Task deleted", message: "Cleared from today." });
       } else {
         showError("Failed to delete task. Please try again.");
       }
@@ -177,8 +203,7 @@ export default function Dashboard() {
 
   async function toggleListening() {
     if (!recognitionRef.current) {
-      setErrorMsg("Voice recognition not supported in this browser.");
-      setTimeout(() => setErrorMsg(""), 5000);
+      showError("Voice recognition not supported in this browser.");
       return;
     }
 
@@ -191,11 +216,10 @@ export default function Dashboard() {
         }
         recognitionRef.current.start();
         setIsListening(true);
-        setErrorMsg("");
+        addToast({ type: "info", title: "Listening", message: "Speak your next task." });
       } catch (err) {
         console.error(err);
-        setErrorMsg("Microphone access denied or unavailable.");
-        setTimeout(() => setErrorMsg(""), 5000);
+        showError("Microphone access denied or unavailable.");
       }
     }
   }
@@ -230,21 +254,6 @@ export default function Dashboard() {
   return (
     <div className="max-w-4xl mx-auto px-6 py-12 min-h-screen relative grid grid-cols-1 lg:grid-cols-3 gap-8">
       
-      {/* Toast Notification */}
-      <AnimatePresence>
-        {errorMsg && (
-          <motion.div 
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="fixed top-6 left-1/2 -translate-x-1/2 z-50 glass-panel border border-red-500/20 px-4 py-3 rounded-xl flex items-center gap-3 text-red-400 text-sm shadow-2xl"
-          >
-            <WarningCircle size={20} weight="fill" />
-            {errorMsg}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Delete Confirmation Modal */}
       <AnimatePresence>
         {deleteConfirm && (

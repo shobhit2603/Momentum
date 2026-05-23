@@ -8,6 +8,8 @@ export const metadata = {
 
 import AuthWrapper from "@/components/AuthWrapper";
 import FloatingDock from "@/components/FloatingDock";
+import { ToastProvider } from "@/components/ToastProvider";
+import { SocketProvider } from "@/components/SocketProvider";
 
 export default function RootLayout({ children }) {
   return (
@@ -18,12 +20,16 @@ export default function RootLayout({ children }) {
             <div className="w-8 h-8 border-2 border-primary/20 border-t-primary rounded-full animate-spin"></div>
           </div>
         }>
-          <AuthWrapper>
-            <main className="flex-1 pb-24">
-              {children}
-            </main>
-            <FloatingDock />
-          </AuthWrapper>
+          <ToastProvider>
+            <AuthWrapper>
+              <SocketProvider>
+                <main className="flex-1 pb-24">
+                  {children}
+                </main>
+                <FloatingDock />
+              </SocketProvider>
+            </AuthWrapper>
+          </ToastProvider>
         </Suspense>
       </body>
     </html>
