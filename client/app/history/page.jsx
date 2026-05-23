@@ -49,7 +49,7 @@ export default function History() {
         </div>
       ) : Object.keys(groupedHistory).length === 0 ? (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-20 glass-panel rounded-3xl border border-dashed border-border/50">
-          <p className="text-neutral-500 font-light text-lg">No history found. Complete some tasks today!</p>
+          <p className="text-neutral-500 font-light text-lg">No history found.</p>
         </motion.div>
       ) : (
         <div className="space-y-12 relative before:absolute before:inset-0 before:ml-[1.1rem] md:before:ml-9 before:w-px before:bg-linear-to-b before:from-border before:via-border/50 before:to-transparent z-0">
