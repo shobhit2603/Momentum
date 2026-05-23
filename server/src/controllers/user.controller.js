@@ -1,4 +1,5 @@
 import * as userDao from "../dao/user.dao.js";
+import * as taskDao from "../dao/task.dao.js";
 import * as utils from "../utils/utils.js";
 import config from "../config/config.js";
 
@@ -95,6 +96,20 @@ export const logoutController = async (req, res) => {
   }
 };
 
+const getTodayRangeIST = () => {
+  const now = new Date();
+  const istDateStr = now.toLocaleDateString("en-US", {
+    timeZone: "Asia/Kolkata",
+  });
+  const [month, day, year] = istDateStr.split("/");
+
+  const start = new Date(
+    `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}T00:00:00.000+05:30`,
+  );
+
+  return { start };
+};
+
 // --- User Profile & Friends Methods ---
 
 export const getProfile = async (req, res) => {
@@ -167,7 +182,32 @@ export const acceptFriendRequest = async (req, res) => {
 export const getFriends = async (req, res) => {
   try {
     const friends = await userDao.getFriends(req.user.id);
-    res.status(200).json({ success: true, friends });
+    const friendIds = friends.map((friend) => friend._id);
+    const { start } = getTodayRangeIST();
+    const completionStats = await taskDao.getCompletionStatsForUsersBeforeDate(
+      friendIds,
+      start,
+    );
+    const statsMap = completionStats.reduce((acc, stat) => {
+      acc[stat._id.toString()] = {
+        total: stat.total,
+        completed: stat.completed,
+      };
+      return acc;
+    }, {});
+
+    const friendsWithStats = friends.map((friend) => {
+      const stats = statsMap[friend._id.toString()] || { total: 0, completed: 0 };
+      const winRate = stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0;
+      const friendData = typeof friend.toObject === "function" ? friend.toObject() : friend;
+
+      return {
+        ...friendData,
+        winRate,
+      };
+    });
+
+    res.status(200).json({ success: true, friends: friendsWithStats });
   } catch (error) {
     console.error("Error in getFriends:", error);
     res.status(500).json({ success: false, message: "Server error fetching friends" });
