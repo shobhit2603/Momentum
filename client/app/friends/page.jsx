@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { UserPlus, ChatTeardropText, PaperPlaneRight, Fire, Smiley, Check, CaretDown } from "@phosphor-icons/react";
+import { UserPlus, ChatTeardropText, PaperPlaneRight, Fire, Smiley, Check, CaretDown, Target } from "@phosphor-icons/react";
 import { fetchAPI } from "@/lib/api";
 import { motion, AnimatePresence } from "motion/react";
 import { renderTaskItem } from "@/lib/taskRenderer";
@@ -121,6 +121,71 @@ export default function FriendsFeed() {
     });
   };
 
+  const formatTimeAgo = (dateValue) => {
+    if (!dateValue) return null;
+    const parsed = new Date(dateValue);
+    if (Number.isNaN(parsed.getTime())) return null;
+    const diffMs = Date.now() - parsed.getTime();
+    const diffMinutes = Math.floor(diffMs / 60000);
+    if (diffMinutes <= 1) return "just now";
+    if (diffMinutes < 60) return `${diffMinutes}m ago`;
+    const diffHours = Math.floor(diffMinutes / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays}d ago`;
+  };
+
+  const getFriendStatus = (friend, completedCount, totalCount) => {
+    const lastActiveLabel = formatTimeAgo(friend.lastActive);
+    const lastActiveDate = friend.lastActive ? new Date(friend.lastActive) : null;
+    const hoursSinceActive = lastActiveDate && !Number.isNaN(lastActiveDate.getTime())
+      ? (Date.now() - lastActiveDate.getTime()) / 3600000
+      : null;
+
+    if (totalCount > 0 && completedCount === totalCount) {
+      return {
+        label: "All tasks done",
+        tone: "text-emerald-400",
+        dot: "bg-emerald-400",
+        detail: "Crushing today's goals",
+      };
+    }
+
+    if (totalCount > 0 && completedCount > 0) {
+      return {
+        label: "In the zone",
+        tone: "text-primary",
+        dot: "bg-primary",
+        detail: "Momentum is building",
+      };
+    }
+
+    if (hoursSinceActive !== null && hoursSinceActive <= 2) {
+      return {
+        label: "Active now",
+        tone: "text-emerald-400",
+        dot: "bg-emerald-400",
+        detail: lastActiveLabel ? `Active ${lastActiveLabel}` : "Recently active",
+      };
+    }
+
+    if (hoursSinceActive !== null && hoursSinceActive <= 24) {
+      return {
+        label: "Taking a break",
+        tone: "text-yellow-400",
+        dot: "bg-yellow-400",
+        detail: lastActiveLabel ? `Last active ${lastActiveLabel}` : "Away for a bit",
+      };
+    }
+
+    return {
+      label: "Offline",
+      tone: "text-neutral-400",
+      dot: "bg-neutral-500",
+      detail: lastActiveLabel ? `Last active ${lastActiveLabel}` : "No recent activity",
+    };
+  };
+
   return (
     <div className="max-w-2xl mx-auto px-6 py-12 min-h-screen">
       <header className="mb-12">
@@ -217,25 +282,48 @@ export default function FriendsFeed() {
             <p className="text-lg">You have no friends on Momentum yet.</p>
           </motion.div>
         ) : (
-          friends.map((friend, i) => (
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1 }}
-              key={friend._id} 
-              className="glass-panel p-6 rounded-3xl group transition-all"
-            >
+          friends.map((friend, i) => {
+            const friendTasksList = friendsTasks[friend._id] || [];
+            const completedCount = friendTasksList.filter(task => task.status === "completed").length;
+            const totalCount = friendTasksList.length;
+            const progressPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+            const safeProgress = Math.min(100, Math.max(0, progressPercent));
+            const remainingCount = Math.max(totalCount - completedCount, 0);
+            const statusInfo = getFriendStatus(friend, completedCount, totalCount);
+            const winRate = Number.isFinite(friend.winRate) ? Math.min(100, Math.max(0, friend.winRate)) : 0;
+
+            return (
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.1 }}
+                key={friend._id} 
+                className="glass-panel p-6 rounded-3xl group transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_30px_rgba(15,15,15,0.35)]"
+              >
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-4">
                   <div className="w-14 h-14 rounded-full bg-surface-hover border border-border flex items-center justify-center overflow-hidden shrink-0 shadow-inner">
                     {friend.profilePicture ? <img src={friend.profilePicture} alt={friend.name} referrerPolicy="no-referrer" className="w-full h-full object-cover" /> : <span className="text-primary font-medium text-xl">{friend.name.charAt(0)}</span>}
                   </div>
                   <div>
-                    <h3 className="font-medium text-xl text-white tracking-tight">{friend.name}</h3>
-                    <div className="flex items-center gap-1.5 text-orange-400/80 text-sm mt-0.5 font-medium">
-                      <Fire weight="fill" />
-                      <span>{friend.streak || 0} Day Streak</span>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <h3 className="font-medium text-xl text-white tracking-tight">{friend.name}</h3>
+                      <span className={`inline-flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-semibold ${statusInfo.tone}`}>
+                        <span className={`h-2 w-2 rounded-full ${statusInfo.dot}`}></span>
+                        {statusInfo.label}
+                      </span>
                     </div>
+                    <div className="flex flex-wrap items-center gap-2 mt-2">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-orange-500/10 text-orange-300 text-xs font-semibold">
+                        <Fire weight="fill" size={14} />
+                        {friend.streak || 0} day streak
+                      </span>
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold">
+                        <Target weight="duotone" size={14} />
+                        {winRate}% win rate
+                      </span>
+                    </div>
+                    <p className="text-xs text-neutral-500 mt-2">{statusInfo.detail}</p>
                   </div>
                 </div>
                 <button 
@@ -246,35 +334,51 @@ export default function FriendsFeed() {
                 </button>
               </div>
 
-              {/* Minimal Progress visual */}
-              <div className="bg-surface/50 p-4 rounded-2xl flex justify-between items-center border border-border/50 mb-4">
-                 <div className="flex flex-col">
-                    <span className="text-[10px] uppercase tracking-widest text-neutral-500 font-bold mb-1">Status</span>
-                    <p className="text-white font-light text-sm">Working hard...</p>
-                 </div>
-                 <div className="text-right flex flex-col">
-                    <span className="text-[10px] uppercase tracking-widest text-neutral-500 font-bold mb-1">Tasks</span>
-                    <p className="text-primary font-medium text-sm">{friendsTasks[friend._id]?.length || 0} {!friendsTasks[friend._id] || friendsTasks[friend._id].length === 0 ? "tasks" : friendsTasks[friend._id].length === 1 ? "task" : "tasks"}</p>
-                 </div>
+              {/* Progress visual */}
+              <div className="bg-surface/50 p-4 rounded-2xl border border-border/50 mb-4">
+                <div className="flex items-start justify-between gap-6">
+                  <div>
+                    <span className="text-[10px] uppercase tracking-widest text-neutral-500 font-bold">Today's progress</span>
+                    <div className="flex items-baseline gap-2 mt-1">
+                      <p className="text-white font-medium text-lg">{safeProgress}%</p>
+                      <span className="text-xs text-neutral-500">{completedCount}/{totalCount || 0} done</span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] uppercase tracking-widest text-neutral-500 font-bold">Remaining</span>
+                    <p className="text-emerald-400 font-medium text-sm mt-1">{remainingCount}</p>
+                  </div>
+                </div>
+                <div className="mt-3 h-2 w-full bg-surface rounded-full overflow-hidden">
+                  <div className="h-full bg-linear-to-r from-primary/80 via-primary to-emerald-400 transition-all duration-500" style={{ width: `${safeProgress}%` }}></div>
+                </div>
+                <div className="flex items-center justify-between mt-2 text-[11px] text-neutral-500">
+                  <span>{totalCount === 0 ? "No tasks logged yet" : `${completedCount} completed`}</span>
+                  <span>{totalCount === 0 ? "Waiting on updates" : `${totalCount} total`}</span>
+                </div>
               </div>
 
               {/* Tasks Section */}
-              {friendsTasks[friend._id] && friendsTasks[friend._id].length > 0 && (
+              {totalCount === 0 ? (
+                <div className="bg-surface/30 p-4 rounded-2xl border border-border/50 mb-4 text-sm text-neutral-500">
+                  No tasks shared yet today. Nudge them with a roast or a toast.
+                </div>
+              ) : (
                 <div className="bg-surface/30 p-4 rounded-2xl border border-border/50 mb-4">
                   <div className="space-y-2">
                     {expandedFriends.has(friend._id) ? (
                       // Show all tasks when expanded
-                      friendsTasks[friend._id].map(task => renderTaskItem(task))
+                      friendTasksList.map(task => renderTaskItem(task))
                     ) : (
                       // Show only first 3 tasks when collapsed
-                      friendsTasks[friend._id].slice(0, 3).map(task => renderTaskItem(task))
+                      friendTasksList.slice(0, 3).map(task => renderTaskItem(task))
                     )}
-                    {friendsTasks[friend._id].length > 3 && (
+                    {friendTasksList.length > 3 && (
                       <button 
                         onClick={() => toggleFriendExpanded(friend._id)}
                         className="text-xs text-primary font-medium pl-6 pt-1 hover:opacity-80 transition-opacity flex items-center gap-1"
                       >
-                        {expandedFriends.has(friend._id) ? "Show less" : `+${friendsTasks[friend._id].length - 3} more`}
+                        {expandedFriends.has(friend._id) ? "Show less" : `+${friendTasksList.length - 3} more`}
                         <CaretDown 
                           size={12} 
                           weight="fill" 
@@ -315,8 +419,9 @@ export default function FriendsFeed() {
                   </motion.form>
                 )}
               </AnimatePresence>
-            </motion.div>
-          ))
+              </motion.div>
+            );
+          })
         )}
       </div>
     </div>
