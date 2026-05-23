@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { CheckCircle, Circle, CircleHalf, Microphone, Plus, WarningCircle, Fire, CaretDown, Trash } from "@phosphor-icons/react";
 import { motion, AnimatePresence } from "motion/react";
+import { toast } from "sonner";
 import { fetchAPI } from "@/lib/api";
 import { renderTaskItem } from "@/lib/taskRenderer";
 
@@ -12,7 +13,6 @@ export default function Dashboard() {
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [isListening, setIsListening] = useState(false);
   const [timeLeft, setTimeLeft] = useState("");
-  const [errorMsg, setErrorMsg] = useState("");
   const [expandedFriends, setExpandedFriends] = useState(new Set());
   const [deleteConfirm, setDeleteConfirm] = useState(null);
 
@@ -41,13 +41,12 @@ export default function Dashboard() {
         console.error("Speech recognition error:", event.error);
         stopListening();
         if (event.error === 'network') {
-          setErrorMsg("Voice search unavailable locally without HTTPS. Try typing instead.");
+          toast.error("Voice search unavailable locally without HTTPS. Try typing instead.");
         } else if (event.error === 'not-allowed') {
-          setErrorMsg("Microphone access denied.");
+          toast.error("Microphone access denied.");
         } else {
-          setErrorMsg(`Voice recognition failed: ${event.error}`);
+          toast.error(`Voice recognition failed: ${event.error}`);
         }
-        setTimeout(() => setErrorMsg(""), 5000);
       };
 
       recognitionRef.current.onend = () => {
@@ -94,6 +93,9 @@ export default function Dashboard() {
     });
     if (status === 201 && data.success) {
       setTasks(prev => [data.task, ...prev]);
+      toast.success("Task added via voice");
+    } else {
+      toast.error("Failed to add task via voice");
     }
   }
 
@@ -107,6 +109,9 @@ export default function Dashboard() {
     if (status === 201 && data.success) {
       setTasks(prev => [data.task, ...prev]);
       setNewTaskTitle("");
+      toast.success("Task added");
+    } else {
+      toast.error("Failed to add task");
     }
   }
 
@@ -122,10 +127,20 @@ export default function Dashboard() {
       window.navigator.vibrate(50);
     }
 
-    await fetchAPI(`/tasks/${taskId}/status`, {
+    const { status } = await fetchAPI(`/tasks/${taskId}/status`, {
       method: "PATCH",
       body: JSON.stringify({ status: newStatus })
     });
+
+    if (status === 200) {
+      if (newStatus === "completed") toast.success("Task completed!");
+      else if (newStatus === "in progress") toast.info("Task in progress");
+      else toast.message("Task marked as not started");
+    } else {
+      toast.error("Failed to update task status");
+      // Revert optimism if failed
+      setTasks(prev => prev.map(t => t._id === taskId ? { ...t, status: currentStatus } : t));
+    }
   }
 
   function toggleFriendExpanded(friendId) {
@@ -140,11 +155,6 @@ export default function Dashboard() {
     });
   }
 
-  function showError(message) {
-    setErrorMsg(message);
-    setTimeout(() => setErrorMsg(""), 5000);
-  }
-
   async function performDeleteTask(taskId) {
     try {
       const { status, data } = await fetchAPI(`/tasks/${taskId}`, {
@@ -153,12 +163,13 @@ export default function Dashboard() {
       
       if (status === 200 && data.success) {
         setTasks(prev => prev.filter(t => t._id !== taskId));
+        toast.success("Task deleted");
       } else {
-        showError("Failed to delete task. Please try again.");
+        toast.error("Failed to delete task. Please try again.");
       }
     } catch (error) {
       console.error("Error deleting task:", error);
-      showError("Failed to delete task. Please try again.");
+      toast.error("Failed to delete task. Please try again.");
     }
     setDeleteConfirm(null);
   }
@@ -177,8 +188,7 @@ export default function Dashboard() {
 
   async function toggleListening() {
     if (!recognitionRef.current) {
-      setErrorMsg("Voice recognition not supported in this browser.");
-      setTimeout(() => setErrorMsg(""), 5000);
+      toast.error("Voice recognition not supported in this browser.");
       return;
     }
 
@@ -191,11 +201,9 @@ export default function Dashboard() {
         }
         recognitionRef.current.start();
         setIsListening(true);
-        setErrorMsg("");
       } catch (err) {
         console.error(err);
-        setErrorMsg("Microphone access denied or unavailable.");
-        setTimeout(() => setErrorMsg(""), 5000);
+        toast.error("Microphone access denied or unavailable.");
       }
     }
   }
@@ -230,21 +238,6 @@ export default function Dashboard() {
   return (
     <div className="max-w-4xl mx-auto px-6 py-12 min-h-screen relative grid grid-cols-1 lg:grid-cols-3 gap-8">
       
-      {/* Toast Notification */}
-      <AnimatePresence>
-        {errorMsg && (
-          <motion.div 
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="fixed top-6 left-1/2 -translate-x-1/2 z-50 glass-panel border border-red-500/20 px-4 py-3 rounded-xl flex items-center gap-3 text-red-400 text-sm shadow-2xl"
-          >
-            <WarningCircle size={20} weight="fill" />
-            {errorMsg}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Delete Confirmation Modal */}
       <AnimatePresence>
         {deleteConfirm && (

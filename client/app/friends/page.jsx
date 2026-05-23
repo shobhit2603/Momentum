@@ -5,6 +5,7 @@ import { UserPlus, ChatTeardropText, PaperPlaneRight, Fire, Smiley, Check, Caret
 import { fetchAPI } from "@/lib/api";
 import { motion, AnimatePresence } from "motion/react";
 import { renderTaskItem } from "@/lib/taskRenderer";
+import { toast } from "sonner";
 import Link from "next/link";
 
 const formatTimeAgo = (dateValue) => {
@@ -139,13 +140,34 @@ export default function FriendsFeed() {
   }, []);
 
   const handleSearch = async (e) => {
-    e.preventDefault();
-    if (!searchQuery.trim()) return;
+    if (e) e.preventDefault();
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      return;
+    }
     const { status, data } = await fetchAPI(`/users/search?query=${searchQuery}`);
     if (status === 200 && data.success) {
       setSearchResults(data.users);
     }
   };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchQuery.trim()) {
+        const fetchSearch = async () => {
+          const { status, data } = await fetchAPI(`/users/search?query=${searchQuery}`);
+          if (status === 200 && data.success) {
+            setSearchResults(data.users);
+          }
+        };
+        fetchSearch();
+      } else {
+        setSearchResults([]);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const handleAddFriend = async (userId) => {
     const { status, data } = await fetchAPI("/users/friend-request", {
@@ -154,8 +176,9 @@ export default function FriendsFeed() {
     });
     if (status === 200) {
       setSentRequests(prev => new Set(prev).add(userId));
+      toast.success("Friend request sent!");
     } else {
-      alert(data?.message || "Failed to send request.");
+      toast.error(data?.message || "Failed to send request.");
     }
   };
 
@@ -176,8 +199,9 @@ export default function FriendsFeed() {
       if (requestsRes.status === 200 && requestsRes.data.success) {
         setPendingRequests(requestsRes.data.requests || []);
       }
+      toast.success("Friend request accepted!");
     } else {
-      alert(data?.message || "Failed to accept request.");
+      toast.error(data?.message || "Failed to accept request.");
     }
   };
 
@@ -196,7 +220,9 @@ export default function FriendsFeed() {
     if (status === 201 || status === 200) {
       setReviewContent("");
       setActiveReviewFriend(null);
-      // Optional toast
+      toast.success("Message sent successfully!");
+    } else {
+      toast.error("Failed to send message.");
     }
   };
 
@@ -248,7 +274,9 @@ export default function FriendsFeed() {
               exit={{ opacity: 0, height: 0 }}
               className="glass-panel rounded-2xl overflow-hidden"
             >
-              {searchResults.map((user, idx) => (
+              {searchResults.map((user, idx) => {
+                const isAlreadyFriend = friends.some(f => f._id === user._id);
+                return (
                 <div key={user._id} className={`flex items-center justify-between p-4 ${idx !== searchResults.length - 1 ? 'border-b border-border' : ''} hover:bg-surface-hover transition-colors`}>
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 rounded-full bg-surface-hover border border-border flex items-center justify-center overflow-hidden">
@@ -261,19 +289,24 @@ export default function FriendsFeed() {
                     </div>
                     <span className="font-light text-white text-lg">{user.name}</span>
                   </div>
-                  <button 
-                    onClick={() => handleAddFriend(user._id)} 
-                    disabled={sentRequests.has(user._id)}
-                    className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                      sentRequests.has(user._id) 
-                        ? "bg-surface-hover text-neutral-500 cursor-not-allowed" 
-                        : "text-primary bg-primary/10 hover:bg-primary/20"
-                    }`}
-                  >
-                    {sentRequests.has(user._id) ? "Sent" : "Add"}
-                  </button>
+                  {isAlreadyFriend ? (
+                    <span className="px-4 py-1.5 rounded-full text-sm font-medium bg-surface-hover text-emerald-400">
+                      Friend
+                    </span>
+                  ) : user.isRequested || sentRequests.has(user._id) ? (
+                    <span className="px-4 py-1.5 rounded-full text-sm font-medium bg-surface-hover text-neutral-500 cursor-not-allowed">
+                      Requested
+                    </span>
+                  ) : (
+                    <button 
+                      onClick={() => handleAddFriend(user._id)} 
+                      className="px-4 py-1.5 rounded-full text-sm font-medium transition-colors text-primary bg-primary/10 hover:bg-primary/20"
+                    >
+                      Add
+                    </button>
+                  )}
                 </div>
-              ))}
+              )})}
             </motion.div>
           )}
         </AnimatePresence>

@@ -134,7 +134,14 @@ export const searchUsers = async (req, res) => {
     const { query } = req.query;
     if (!query) return res.status(400).json({ success: false, message: "Query required" });
 
-    const users = await userDao.searchUsers(query, req.user.id);
+    const rawUsers = await userDao.searchUsers(query, req.user.id);
+    const users = rawUsers.map(u => {
+      const userObj = u.toObject();
+      const isRequested = userObj.friendRequests && userObj.friendRequests.some(id => id.toString() === req.user.id);
+      delete userObj.friendRequests;
+      return { ...userObj, isRequested };
+    });
+
     res.status(200).json({ success: true, users });
   } catch (error) {
     console.error("Error in searchUsers:", error);

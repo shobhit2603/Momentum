@@ -26,7 +26,7 @@ export async function searchUsers(query, excludeId) {
   return await User.find({
     name: { $regex: query, $options: "i" },
     _id: { $ne: excludeId },
-  }).select("name email profilePicture");
+  }).select("name email profilePicture friendRequests");
 }
 
 export async function addFriendRequest(targetId, requesterId) {

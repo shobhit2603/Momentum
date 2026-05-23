@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 import { fetchAPI } from "@/lib/api";
 
 export default function AuthWrapper({ children }) {
@@ -16,6 +17,7 @@ export default function AuthWrapper({ children }) {
       const urlToken = searchParams.get("token");
       if (urlToken) {
         localStorage.setItem("token", urlToken);
+        toast.success("Login successful!");
         // Clean up the URL
         router.replace(pathname);
       }
@@ -36,7 +38,7 @@ export default function AuthWrapper({ children }) {
     };
 
     checkAuth();
-  }, [pathname, router]);
+  }, [pathname, router, searchParams]);
 
   // Loading state
   if (isAuthenticated === null && pathname !== "/login") {
