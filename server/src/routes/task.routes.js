@@ -8,6 +8,7 @@ import {
   getFriendTasks,
   getAllFriendsTasks,
   deleteTask,
+  getFriendTaskHistory,
 } from "../controllers/task.controller.js";
 
 const taskRouter = Router();
@@ -22,5 +23,6 @@ taskRouter.get("/history", getTaskHistory);
 taskRouter.patch("/:taskId/status", updateTaskStatus);
 taskRouter.delete("/:taskId", deleteTask);
 taskRouter.get("/friend/:friendId/today", getFriendTasks);
+taskRouter.get("/friend/:friendId/history", getFriendTaskHistory);
 
 export default taskRouter;

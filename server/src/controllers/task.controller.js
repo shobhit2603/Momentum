@@ -109,6 +109,29 @@ export const getTaskHistory = async (req, res) => {
   }
 };
 
+export const getFriendTaskHistory = async (req, res) => {
+  try {
+    const { friendId } = req.params;
+    const { start } = getTodayRangeIST();
+
+    const pastTasks = await taskDao.getTasksBeforeDate(friendId, start);
+
+    const processedHistory = pastTasks.map((task) => {
+      if (task.status === "not started" || task.status === "in progress") {
+        task.status = "failed";
+      }
+      return task;
+    });
+
+    res.status(200).json({ success: true, tasks: processedHistory });
+  } catch (error) {
+    console.error("Error in getFriendTaskHistory:", error);
+    res
+      .status(500)
+      .json({ success: false, message: "Server error fetching friend task history" });
+  }
+};
+
 export const getFriendTasks = async (req, res) => {
   try {
     const { friendId } = req.params;

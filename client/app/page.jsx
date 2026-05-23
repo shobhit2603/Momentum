@@ -73,21 +73,21 @@ export default function Dashboard() {
     return () => clearInterval(timer);
   }, []);
 
-  const loadTasks = async () => {
+  async function loadTasks() {
     const { status, data } = await fetchAPI("/tasks/today");
     if (status === 200 && data.success) {
       setTasks(data.tasks);
     }
-  };
+  }
 
-  const loadFriendsTasks = async () => {
+  async function loadFriendsTasks() {
     const { status, data } = await fetchAPI("/tasks/friends/today");
     if (status === 200 && data.success) {
       setFriendsTasks(data.tasks);
     }
-  };
+  }
 
-  const handleVoiceSubmit = async (text) => {
+  async function handleVoiceSubmit(text) {
     const { status, data } = await fetchAPI("/tasks", {
       method: "POST",
       body: JSON.stringify({ title: text })
@@ -95,9 +95,9 @@ export default function Dashboard() {
     if (status === 201 && data.success) {
       setTasks(prev => [data.task, ...prev]);
     }
-  };
+  }
 
-  const handleManualSubmit = async (e) => {
+  async function handleManualSubmit(e) {
     e.preventDefault();
     if (!newTaskTitle.trim()) return;
     const { status, data } = await fetchAPI("/tasks", {
@@ -108,9 +108,9 @@ export default function Dashboard() {
       setTasks(prev => [data.task, ...prev]);
       setNewTaskTitle("");
     }
-  };
+  }
 
-  const toggleTask = async (taskId, currentStatus) => {
+  async function toggleTask(taskId, currentStatus) {
     let newStatus = "not started";
     if (currentStatus === "not started" || currentStatus === "pending") newStatus = "in progress";
     else if (currentStatus === "in progress") newStatus = "completed";
@@ -126,9 +126,9 @@ export default function Dashboard() {
       method: "PATCH",
       body: JSON.stringify({ status: newStatus })
     });
-  };
+  }
 
-  const toggleFriendExpanded = (friendId) => {
+  function toggleFriendExpanded(friendId) {
     setExpandedFriends(prev => {
       const newSet = new Set(prev);
       if (newSet.has(friendId)) {
@@ -138,14 +138,14 @@ export default function Dashboard() {
       }
       return newSet;
     });
-  };
+  }
 
-  const showError = (message) => {
+  function showError(message) {
     setErrorMsg(message);
     setTimeout(() => setErrorMsg(""), 5000);
-  };
+  }
 
-  const performDeleteTask = async (taskId) => {
+  async function performDeleteTask(taskId) {
     try {
       const { status, data } = await fetchAPI(`/tasks/${taskId}`, {
         method: "DELETE"
@@ -161,21 +161,21 @@ export default function Dashboard() {
       showError("Failed to delete task. Please try again.");
     }
     setDeleteConfirm(null);
-  };
+  }
 
-  const deleteTask = (taskId, e) => {
+  function deleteTask(taskId, e) {
     e.stopPropagation();
     setDeleteConfirm(taskId);
-  };
+  }
 
-  const stopListening = () => {
+  function stopListening() {
     if (recognitionRef.current) {
       recognitionRef.current.stop();
     }
     setIsListening(false);
-  };
+  }
 
-  const toggleListening = async () => {
+  async function toggleListening() {
     if (!recognitionRef.current) {
       setErrorMsg("Voice recognition not supported in this browser.");
       setTimeout(() => setErrorMsg(""), 5000);
@@ -198,7 +198,7 @@ export default function Dashboard() {
         setTimeout(() => setErrorMsg(""), 5000);
       }
     }
-  };
+  }
 
   const completedCount = tasks.filter(t => t.status === "completed").length;
   const progress = tasks.length === 0 ? 0 : (completedCount / tasks.length) * 100;
@@ -296,7 +296,7 @@ export default function Dashboard() {
             </div>
           </motion.div>
           <h1 className="text-4xl sm:text-5xl font-light tracking-tight text-white mb-2">
-            Today's <span className="text-gradient font-medium">Momentum</span>
+            Today&apos;s <span className="text-gradient font-medium">Momentum</span>
           </h1>
         </header>
 
@@ -367,7 +367,7 @@ export default function Dashboard() {
                   <div className="mr-2 md:mr-5 shrink-0 transition-transform group-hover:scale-110">
                     {renderTaskIcon(task.status)}
                   </div>
-                  <span className={`flex-1 text-base md:text-lg font-light transition-all duration-300 break-words ${task.status === "completed" ? "text-neutral-500 line-through decoration-neutral-600" : "text-white"}`}>
+                  <span className={`flex-1 text-base md:text-lg font-light transition-all duration-300 wrap-break-word ${task.status === "completed" ? "text-neutral-500 line-through decoration-neutral-600" : "text-white"}`}>
                     {task.title}
                   </span>
                   <button
@@ -407,6 +407,7 @@ export default function Dashboard() {
                   <div className="flex items-center gap-3 mb-4">
                     <div className="w-10 h-10 rounded-full overflow-hidden bg-surface-hover border border-border shrink-0">
                       {friend.profilePicture ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
                         <img src={friend.profilePicture} alt={friend.name} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-primary font-medium">{friend.name.charAt(0)}</div>

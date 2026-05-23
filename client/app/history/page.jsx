@@ -11,16 +11,21 @@ export default function History() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadHistory();
-  }, []);
-
-  const loadHistory = async () => {
-    const { status, data } = await fetchAPI("/tasks/history");
-    if (status === 200 && data.success) {
-      setHistory(data.tasks || []);
+    let isMounted = true;
+    async function fetchData() {
+      try {
+        const { status, data } = await fetchAPI("/tasks/history");
+        if (!isMounted) return;
+        if (status === 200 && data.success) {
+          setHistory(data.tasks || []);
+        }
+      } finally {
+        if (isMounted) setLoading(false);
+      }
     }
-    setLoading(false);
-  };
+    fetchData();
+    return () => { isMounted = false; };
+  }, []);
 
   const groupedHistory = history.reduce((acc, task) => {
     const date = new Date(task.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });

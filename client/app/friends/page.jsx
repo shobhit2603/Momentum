@@ -5,6 +5,72 @@ import { UserPlus, ChatTeardropText, PaperPlaneRight, Fire, Smiley, Check, Caret
 import { fetchAPI } from "@/lib/api";
 import { motion, AnimatePresence } from "motion/react";
 import { renderTaskItem } from "@/lib/taskRenderer";
+import Link from "next/link";
+
+const formatTimeAgo = (dateValue) => {
+  if (!dateValue) return null;
+  const parsed = new Date(dateValue);
+  if (Number.isNaN(parsed.getTime())) return null;
+  const diffMs = Date.now() - parsed.getTime();
+  const diffMinutes = Math.floor(diffMs / 60000);
+  if (diffMinutes <= 1) return "just now";
+  if (diffMinutes < 60) return `${diffMinutes}m ago`;
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  return `${diffDays}d ago`;
+};
+
+const getFriendStatus = (friend, completedCount, totalCount) => {
+  const lastActiveLabel = formatTimeAgo(friend.lastActive);
+  const lastActiveDate = friend.lastActive ? new Date(friend.lastActive) : null;
+  const hoursSinceActive = lastActiveDate && !Number.isNaN(lastActiveDate.getTime())
+    ? (Date.now() - lastActiveDate.getTime()) / 3600000
+    : null;
+
+  if (totalCount > 0 && completedCount === totalCount) {
+    return {
+      label: "All tasks done",
+      tone: "text-emerald-400",
+      dot: "bg-emerald-400",
+      detail: "Crushing today's goals",
+    };
+  }
+
+  if (totalCount > 0 && completedCount > 0) {
+    return {
+      label: "In the zone",
+      tone: "text-primary",
+      dot: "bg-primary",
+      detail: "Momentum is building",
+    };
+  }
+
+  if (hoursSinceActive !== null && hoursSinceActive <= 2) {
+    return {
+      label: "Active now",
+      tone: "text-emerald-400",
+      dot: "bg-emerald-400",
+      detail: lastActiveLabel ? `Active ${lastActiveLabel}` : "Recently active",
+    };
+  }
+
+  if (hoursSinceActive !== null && hoursSinceActive <= 24) {
+    return {
+      label: "Taking a break",
+      tone: "text-yellow-400",
+      dot: "bg-yellow-400",
+      detail: lastActiveLabel ? `Last active ${lastActiveLabel}` : "Away for a bit",
+    };
+  }
+
+  return {
+    label: "Offline",
+    tone: "text-neutral-400",
+    dot: "bg-neutral-500",
+    detail: lastActiveLabel ? `Last active ${lastActiveLabel}` : "No recent activity",
+  };
+};
 
 export default function FriendsFeed() {
   const [friends, setFriends] = useState([]);
@@ -31,28 +97,45 @@ export default function FriendsFeed() {
     }
   };
 
-  const loadFriendsTasks = async () => {
-    const { status, data } = await fetchAPI("/tasks/friends/today");
-    if (status === 200 && data.success) {
-      // Group tasks by friend ID
-      const grouped = {};
-      data.tasks.forEach(task => {
-        const friendId = task.userId?._id;
-        if (friendId) {
-          if (!grouped[friendId]) {
-            grouped[friendId] = [];
-          }
-          grouped[friendId].push(task);
-        }
-      });
-      setFriendsTasks(grouped);
-    }
-  };
-
   useEffect(() => {
-    loadFriends();
-    loadPendingRequests();
-    loadFriendsTasks();
+    let isMounted = true;
+    async function fetchData() {
+      try {
+        const [friendsRes, requestsRes, tasksRes] = await Promise.all([
+          fetchAPI("/users/friends"),
+          fetchAPI("/users/friend-requests"),
+          fetchAPI("/tasks/friends/today")
+        ]);
+
+        if (!isMounted) return;
+
+        if (friendsRes.status === 200 && friendsRes.data.success) {
+          setFriends(friendsRes.data.friends || []);
+        }
+
+        if (requestsRes.status === 200 && requestsRes.data.success) {
+          setPendingRequests(requestsRes.data.requests || []);
+        }
+
+        if (tasksRes.status === 200 && tasksRes.data.success) {
+          const grouped = {};
+          tasksRes.data.tasks.forEach(task => {
+            const friendId = task.userId?._id;
+            if (friendId) {
+              if (!grouped[friendId]) {
+                grouped[friendId] = [];
+              }
+              grouped[friendId].push(task);
+            }
+          });
+          setFriendsTasks(grouped);
+        }
+      } catch (err) {
+        console.error("Error fetching friends data:", err);
+      }
+    }
+    fetchData();
+    return () => { isMounted = false; };
   }, []);
 
   const handleSearch = async (e) => {
@@ -82,9 +165,17 @@ export default function FriendsFeed() {
       body: JSON.stringify({ requesterId })
     });
     if (status === 200) {
-      // Refresh both lists
-      loadFriends();
-      loadPendingRequests();
+      // Refresh both lists manually
+      const [friendsRes, requestsRes] = await Promise.all([
+        fetchAPI("/users/friends"),
+        fetchAPI("/users/friend-requests")
+      ]);
+      if (friendsRes.status === 200 && friendsRes.data.success) {
+        setFriends(friendsRes.data.friends || []);
+      }
+      if (requestsRes.status === 200 && requestsRes.data.success) {
+        setPendingRequests(requestsRes.data.requests || []);
+      }
     } else {
       alert(data?.message || "Failed to accept request.");
     }
@@ -121,70 +212,7 @@ export default function FriendsFeed() {
     });
   };
 
-  const formatTimeAgo = (dateValue) => {
-    if (!dateValue) return null;
-    const parsed = new Date(dateValue);
-    if (Number.isNaN(parsed.getTime())) return null;
-    const diffMs = Date.now() - parsed.getTime();
-    const diffMinutes = Math.floor(diffMs / 60000);
-    if (diffMinutes <= 1) return "just now";
-    if (diffMinutes < 60) return `${diffMinutes}m ago`;
-    const diffHours = Math.floor(diffMinutes / 60);
-    if (diffHours < 24) return `${diffHours}h ago`;
-    const diffDays = Math.floor(diffHours / 24);
-    return `${diffDays}d ago`;
-  };
 
-  const getFriendStatus = (friend, completedCount, totalCount) => {
-    const lastActiveLabel = formatTimeAgo(friend.lastActive);
-    const lastActiveDate = friend.lastActive ? new Date(friend.lastActive) : null;
-    const hoursSinceActive = lastActiveDate && !Number.isNaN(lastActiveDate.getTime())
-      ? (Date.now() - lastActiveDate.getTime()) / 3600000
-      : null;
-
-    if (totalCount > 0 && completedCount === totalCount) {
-      return {
-        label: "All tasks done",
-        tone: "text-emerald-400",
-        dot: "bg-emerald-400",
-        detail: "Crushing today's goals",
-      };
-    }
-
-    if (totalCount > 0 && completedCount > 0) {
-      return {
-        label: "In the zone",
-        tone: "text-primary",
-        dot: "bg-primary",
-        detail: "Momentum is building",
-      };
-    }
-
-    if (hoursSinceActive !== null && hoursSinceActive <= 2) {
-      return {
-        label: "Active now",
-        tone: "text-emerald-400",
-        dot: "bg-emerald-400",
-        detail: lastActiveLabel ? `Active ${lastActiveLabel}` : "Recently active",
-      };
-    }
-
-    if (hoursSinceActive !== null && hoursSinceActive <= 24) {
-      return {
-        label: "Taking a break",
-        tone: "text-yellow-400",
-        dot: "bg-yellow-400",
-        detail: lastActiveLabel ? `Last active ${lastActiveLabel}` : "Away for a bit",
-      };
-    }
-
-    return {
-      label: "Offline",
-      tone: "text-neutral-400",
-      dot: "bg-neutral-500",
-      detail: lastActiveLabel ? `Last active ${lastActiveLabel}` : "No recent activity",
-    };
-  };
 
   return (
     <div className="max-w-2xl mx-auto px-6 py-12 min-h-screen">
@@ -224,7 +252,12 @@ export default function FriendsFeed() {
                 <div key={user._id} className={`flex items-center justify-between p-4 ${idx !== searchResults.length - 1 ? 'border-b border-border' : ''} hover:bg-surface-hover transition-colors`}>
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 rounded-full bg-surface-hover border border-border flex items-center justify-center overflow-hidden">
-                      {user.profilePicture ? <img src={user.profilePicture} alt={user.name} referrerPolicy="no-referrer" /> : <span className="text-primary font-medium">{user.name.charAt(0)}</span>}
+                      {user.profilePicture ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img src={user.profilePicture} alt={user.name} referrerPolicy="no-referrer" />
+                      ) : (
+                        <span className="text-primary font-medium">{user.name.charAt(0)}</span>
+                      )}
                     </div>
                     <span className="font-light text-white text-lg">{user.name}</span>
                   </div>
@@ -261,7 +294,12 @@ export default function FriendsFeed() {
                 <div key={user._id} className={`flex items-center justify-between p-4 ${idx !== pendingRequests.length - 1 ? 'border-b border-border' : ''} bg-surface/50`}>
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 rounded-full bg-surface-hover border border-border flex items-center justify-center overflow-hidden">
-                      {user.profilePicture ? <img src={user.profilePicture} alt={user.name} referrerPolicy="no-referrer" /> : <span className="text-primary font-medium">{user.name.charAt(0)}</span>}
+                      {user.profilePicture ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img src={user.profilePicture} alt={user.name} referrerPolicy="no-referrer" />
+                      ) : (
+                        <span className="text-primary font-medium">{user.name.charAt(0)}</span>
+                      )}
                     </div>
                     <span className="font-light text-white text-lg">{user.name}</span>
                   </div>
@@ -302,12 +340,17 @@ export default function FriendsFeed() {
               >
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-full bg-surface-hover border border-border flex items-center justify-center overflow-hidden shrink-0 shadow-inner">
-                    {friend.profilePicture ? <img src={friend.profilePicture} alt={friend.name} referrerPolicy="no-referrer" className="w-full h-full object-cover" /> : <span className="text-primary font-medium text-xl">{friend.name.charAt(0)}</span>}
-                  </div>
+                  <Link href={`/friends/${friend._id}`} className="w-14 h-14 rounded-full bg-surface-hover border border-border flex items-center justify-center overflow-hidden shrink-0 shadow-inner hover:scale-105 hover:border-primary/50 transition-all cursor-pointer">
+                    {friend.profilePicture ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img src={friend.profilePicture} alt={friend.name} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-primary font-medium text-xl">{friend.name.charAt(0)}</span>
+                    )}
+                  </Link>
                   <div>
                     <div className="flex flex-wrap items-center gap-3">
-                      <h3 className="font-medium text-xl text-white tracking-tight">{friend.name}</h3>
+                      <Link href={`/friends/${friend._id}`} className="font-medium text-xl text-white tracking-tight hover:text-primary transition-colors cursor-pointer">{friend.name}</Link>
                       <span className={`inline-flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-semibold ${statusInfo.tone}`}>
                         <span className={`h-2 w-2 rounded-full ${statusInfo.dot}`}></span>
                         {statusInfo.label}
@@ -338,7 +381,7 @@ export default function FriendsFeed() {
               <div className="bg-surface/50 p-4 rounded-2xl border border-border/50 mb-4">
                 <div className="flex items-start justify-between gap-6">
                   <div>
-                    <span className="text-[10px] uppercase tracking-widest text-neutral-500 font-bold">Today's progress</span>
+                    <span className="text-[10px] uppercase tracking-widest text-neutral-500 font-bold">Today&apos;s progress</span>
                     <div className="flex items-baseline gap-2 mt-1">
                       <p className="text-white font-medium text-lg">{safeProgress}%</p>
                       <span className="text-xs text-neutral-500">{completedCount}/{totalCount || 0} done</span>

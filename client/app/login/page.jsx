@@ -121,7 +121,7 @@ export default function Login() {
             className="absolute -bottom-16 -right-8 glass-panel p-5 rounded-2xl flex items-center gap-4 w-72 shadow-2xl border-primary/20 rotate-[-5deg] backdrop-blur-xl"
           >
             <CheckCircle weight="fill" className="text-primary text-2xl shrink-0" />
-            <span className="text-neutral-300 font-light text-sm line-through decoration-neutral-600">Let's Grow Together</span>
+            <span className="text-neutral-300 font-light text-sm line-through decoration-neutral-600">Let&apos;s Grow Together</span>
             <Fire weight="fill" className="text-orange-500 ml-auto" />
           </motion.div>
         </div>

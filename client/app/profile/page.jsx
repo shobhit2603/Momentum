@@ -5,7 +5,7 @@ import { fetchAPI } from "@/lib/api";
 import {
   SignOut,
   Fire,
-  ChartLineUp,
+  CheckCircle,
   Target,
   Users,
   ChatCircle,
@@ -15,47 +15,50 @@ import {
 } from "@phosphor-icons/react";
 import { motion } from "motion/react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function Profile() {
   const [user, setUser] = useState(null);
   const [history, setHistory] = useState([]);
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
-    Promise.all([
-      loadProfile(),
-      loadHistory(),
-      loadReviews()
-    ]).finally(() => setLoading(false));
+    let isMounted = true;
+    async function fetchData() {
+      try {
+        const [profileRes, historyRes, reviewsRes] = await Promise.all([
+          fetchAPI("/users/profile"),
+          fetchAPI("/tasks/history"),
+          fetchAPI("/reviews/me/today")
+        ]);
+
+        if (!isMounted) return;
+
+        if (profileRes.status === 200 && profileRes.data.success) {
+          setUser(profileRes.data.user);
+        }
+        if (historyRes.status === 200 && historyRes.data.success) {
+          setHistory(historyRes.data.tasks || []);
+        }
+        if (reviewsRes.status === 200 && reviewsRes.data.success) {
+          setReviews(reviewsRes.data.reviews || []);
+        }
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    }
+
+    fetchData();
+    return () => { isMounted = false; };
   }, []);
 
-  const loadProfile = async () => {
-    const { status, data } = await fetchAPI("/users/profile");
-    if (status === 200 && data.success) {
-      setUser(data.user);
-    }
-  };
-
-  const loadHistory = async () => {
-    const { status, data } = await fetchAPI("/tasks/history");
-    if (status === 200 && data.success) {
-      setHistory(data.tasks || []);
-    }
-  };
-
-  const loadReviews = async () => {
-    const { status, data } = await fetchAPI("/reviews/me/today");
-    if (status === 200 && data.success) {
-      setReviews(data.reviews || []);
-    }
-  };
-
-  const handleLogout = async () => {
+  async function handleLogout() {
     localStorage.removeItem("token");
     await fetchAPI("/users/logout", { method: "POST" });
     window.location.href = "/";
-  };
+  }
 
   if (loading || !user) {
     return (
@@ -70,15 +73,14 @@ export default function Profile() {
   const totalTasks = history.length;
   const completionRate = totalTasks > 0 ? Math.round((completedTotal / totalTasks) * 100) : 0;
 
-  // Calculate average tasks per day from history
   const uniqueDays = new Set(history.map(t => new Date(t.date).toDateString())).size;
   const avgTasksPerDay = uniqueDays > 0 ? (completedTotal / uniqueDays).toFixed(1) : 0;
 
   return (
-    <div className="max-w-4xl mx-auto px-6 py-12 pb-32 min-h-screen">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12 pb-32 min-h-screen">
       <header className="mb-12 flex items-start justify-between">
-        <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}>
-          <h1 className="text-4xl sm:text-5xl font-light tracking-tight text-white mb-2">
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+          <h1 className="text-4xl sm:text-5xl font-light text-white tracking-tight mb-2">
             Your <span className="text-gradient font-medium">Profile</span>
           </h1>
           <p className="text-neutral-500 font-light text-lg">Your momentum at a glance.</p>
@@ -89,53 +91,52 @@ export default function Profile() {
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={handleLogout}
-          className="p-3 bg-surface-hover border border-border text-red-400 hover:text-red-300 rounded-2xl transition-colors flex items-center gap-2 font-medium shadow-sm"
+          className="p-2.5 bg-surface border border-border text-red-400 hover:text-red-300 rounded-xl transition-colors flex items-center gap-2 shadow-sm"
         >
           <SignOut size={20} weight="bold" />
         </motion.button>
       </header>
 
-      {/* Main Top Section: Identity & Primary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+      {/* Main Grid Layout */}
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+        
         {/* User Identity Card */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="md:col-span-2 glass-panel rounded-4xl p-8 flex flex-col sm:flex-row items-center sm:items-start gap-8 text-center sm:text-left relative overflow-hidden"
+          className="md:col-span-8 bg-surface/40 backdrop-blur-xl border border-white/5 rounded-3xl p-6 sm:p-8 flex flex-col sm:flex-row items-center sm:items-start gap-6 text-center sm:text-left relative overflow-hidden group hover:border-primary/20 transition-all"
         >
-          <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-[80px] pointer-events-none"></div>
-
-          <div className="relative group">
-            <div className="w-28 h-28 rounded-full bg-surface-hover border-[3px] border-surface overflow-hidden shrink-0 shadow-2xl shadow-primary/20 relative z-10 transition-transform duration-500 group-hover:scale-105">
+          <div className="relative shrink-0">
+            <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-surface border border-border overflow-hidden relative z-10">
               {user.profilePicture ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
                 <img src={user.profilePicture} alt={user.name} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
               ) : (
-                <div className="w-full h-full bg-primary/10 text-primary flex items-center justify-center font-medium text-4xl">
+                <div className="w-full h-full flex items-center justify-center text-primary font-medium text-4xl">
                   {user.name.charAt(0)}
                 </div>
               )}
             </div>
-            {/* Pulsing ring behind avatar */}
-            <div className="absolute inset-0 rounded-full border-2 border-primary/30 animate-ping opacity-20"></div>
+            <div className="absolute inset-0 rounded-full border border-primary/20 scale-110 opacity-0 group-hover:opacity-100 transition-all duration-500"></div>
           </div>
 
-          <div className="flex-1 z-10">
-            <h2 className="text-3xl font-medium text-white tracking-tight mb-1">{user.name}</h2>
-            <p className="text-neutral-400 font-light mb-6 bg-surface/50 inline-block px-3 py-1 rounded-full text-sm border border-border/50">{user.email}</p>
+          <div className="flex-1 z-10 flex flex-col justify-center h-full">
+            <h2 className="text-2xl sm:text-3xl font-medium text-white tracking-tight mb-1">{user.name}</h2>
+            <p className="text-neutral-500 font-light mb-6 text-sm">{user.email}</p>
 
-            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4">
-              <div className="bg-surface border border-border px-4 py-2 rounded-xl flex items-center gap-3 shadow-inner">
-                <Fire weight="fill" className="text-orange-400" size={24} />
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3">
+              <div className="bg-background/50 border border-border px-4 py-2.5 rounded-2xl flex items-center gap-3">
+                <Fire weight="fill" className="text-orange-400/80" size={20} />
                 <div className="flex flex-col text-left">
-                  <span className="text-[10px] text-neutral-500 uppercase tracking-widest font-bold">Streak</span>
-                  <span className="text-white font-medium text-lg leading-none mt-0.5">{user.streak || 0} Days</span>
+                  <span className="text-[10px] text-neutral-500 uppercase tracking-widest font-semibold">Streak</span>
+                  <span className="text-white font-medium text-sm leading-none mt-1">{user.streak || 0} Days</span>
                 </div>
               </div>
-              <div className="bg-surface border border-border px-4 py-2 rounded-xl flex items-center gap-3 shadow-inner">
-                <Users weight="fill" className="text-blue-400" size={24} />
+              <div className="bg-background/50 border border-border px-4 py-2.5 rounded-2xl flex items-center gap-3">
+                <Users weight="fill" className="text-blue-400/80" size={20} />
                 <div className="flex flex-col text-left">
-                  <span className="text-[10px] text-neutral-500 uppercase tracking-widest font-bold">Squad</span>
-                  <span className="text-white font-medium text-lg leading-none mt-0.5">{user.friends?.length || 0} Friends</span>
+                  <span className="text-[10px] text-neutral-500 uppercase tracking-widest font-semibold">Squad</span>
+                  <span className="text-white font-medium text-sm leading-none mt-1">{user.friends?.length || 0} Friends</span>
                 </div>
               </div>
             </div>
@@ -144,115 +145,126 @@ export default function Profile() {
 
         {/* Completion Rate Card */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="glass-panel rounded-4xl p-8 flex flex-col items-center justify-center relative overflow-hidden"
+          className="md:col-span-4 bg-surface/40 backdrop-blur-xl border border-white/5 rounded-3xl p-6 sm:p-8 flex flex-col items-center justify-center text-center hover:border-primary/20 transition-all"
         >
-          <div className="absolute inset-0 bg-linear-to-br from-primary/5 to-transparent pointer-events-none"></div>
-          <Target weight="duotone" className="text-primary mb-4" size={48} />
-          <h3 className="text-5xl font-light text-white mb-2">{completionRate}<span className="text-2xl text-neutral-500">%</span></h3>
-          <p className="text-xs uppercase tracking-widest text-neutral-500 font-bold">Win Rate</p>
-          <div className="w-full h-1.5 bg-surface rounded-full mt-6 overflow-hidden">
-            <div className="h-full bg-primary" style={{ width: `${completionRate}%` }}></div>
+          <Target weight="duotone" className="text-primary/70 mb-3" size={32} />
+          <h3 className="text-4xl sm:text-5xl font-light text-white mb-1">{completionRate}<span className="text-xl text-neutral-500">%</span></h3>
+          <p className="text-[11px] uppercase tracking-widest text-neutral-500 font-medium">Win Rate</p>
+          <div className="w-full h-1 bg-background rounded-full mt-5 overflow-hidden">
+            <div className="h-full bg-primary/80" style={{ width: `${completionRate}%` }}></div>
           </div>
         </motion.div>
       </div>
 
       {/* Secondary Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-12">
-        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.15 }} className="glass-panel p-6 rounded-3xl flex flex-col hover:bg-surface-hover transition-colors">
-          <ChartLineUp weight="duotone" className="text-emerald-400 mb-3" size={28} />
-          <span className="text-2xl font-medium text-white mb-1">{completedTotal}</span>
-          <span className="text-[10px] uppercase tracking-widest text-neutral-500 font-bold">Total Done</span>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.15 }} className="bg-surface/40 backdrop-blur-xl border border-white/5 p-5 rounded-3xl flex flex-col hover:border-primary/20 transition-all">
+          <CheckCircle weight="duotone" className="text-emerald-400/70 mb-2" size={24} />
+          <span className="text-xl font-medium text-white mb-1">{completedTotal}</span>
+          <span className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">Total Done</span>
         </motion.div>
 
-        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }} className="glass-panel p-6 rounded-3xl flex flex-col hover:bg-surface-hover transition-colors">
-          <CalendarCheck weight="duotone" className="text-purple-400 mb-3" size={28} />
-          <span className="text-2xl font-medium text-white mb-1">{uniqueDays}</span>
-          <span className="text-[10px] uppercase tracking-widest text-neutral-500 font-bold">Active Days</span>
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }} className="bg-surface/40 backdrop-blur-xl border border-white/5 p-5 rounded-3xl flex flex-col hover:border-primary/20 transition-all">
+          <CalendarCheck weight="duotone" className="text-purple-400/70 mb-2" size={24} />
+          <span className="text-xl font-medium text-white mb-1">{uniqueDays}</span>
+          <span className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">Active Days</span>
         </motion.div>
 
-        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.25 }} className="glass-panel p-6 rounded-3xl flex flex-col hover:bg-surface-hover transition-colors">
-          <Lightning weight="duotone" className="text-yellow-400 mb-3" size={28} />
-          <span className="text-2xl font-medium text-white mb-1">{avgTasksPerDay}</span>
-          <span className="text-[10px] uppercase tracking-widest text-neutral-500 font-bold">Daily Avg</span>
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.25 }} className="bg-surface/40 backdrop-blur-xl border border-white/5 p-5 rounded-3xl flex flex-col hover:border-primary/20 transition-all">
+          <Lightning weight="duotone" className="text-yellow-400/70 mb-2" size={24} />
+          <span className="text-xl font-medium text-white mb-1">{avgTasksPerDay}</span>
+          <span className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">Daily Avg</span>
         </motion.div>
 
-        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3 }} className="glass-panel p-6 rounded-3xl flex flex-col hover:bg-surface-hover transition-colors">
-          <ChatCircle weight="duotone" className="text-pink-400 mb-3" size={28} />
-          <span className="text-2xl font-medium text-white mb-1">{reviews.length}</span>
-          <span className="text-[10px] uppercase tracking-widest text-neutral-500 font-bold">Today's Roasts</span>
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3 }} className="bg-surface/40 backdrop-blur-xl border border-white/5 p-5 rounded-3xl flex flex-col hover:border-primary/20 transition-all">
+          <ChatCircle weight="duotone" className="text-pink-400/70 mb-2" size={24} />
+          <span className="text-xl font-medium text-white mb-1">{reviews.length}</span>
+          <span className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">Today&apos;s Feedback</span>
         </motion.div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
         {/* Friends/Squad Snapshot */}
-        <div>
-          <h3 className="text-sm font-bold uppercase tracking-widest text-neutral-500 mb-6 flex items-center gap-2">
-            <Users weight="fill" className="text-blue-400" />
-            Your Squad
-          </h3>
-          <div className="glass-panel rounded-3xl p-6">
-            {!user.friends || user.friends.length === 0 ? (
-              <p className="text-neutral-500 font-light text-center py-6">You haven't added any friends yet.</p>
-            ) : (
-              <div className="flex flex-wrap gap-4">
-                {user.friends.map(friend => (
-                  <div key={friend._id} className="relative group cursor-pointer">
-                    <div className="w-14 h-14 rounded-full border-2 border-border bg-surface overflow-hidden transition-transform group-hover:scale-110 group-hover:border-primary/50 shadow-md">
-                      {friend.profilePicture ? (
-                        <img src={friend.profilePicture} alt={friend.name} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-primary font-medium">{friend.name.charAt(0)}</div>
-                      )}
-                    </div>
-                    {/* Tooltip */}
-                    <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-surface border border-border text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-20">
-                      {friend.name}
-                    </div>
-                  </div>
-                ))}
-                <Link href="/friends" className="w-14 h-14 rounded-full border-2 border-dashed border-border bg-surface-hover flex items-center justify-center text-neutral-500 hover:text-primary hover:border-primary/50 transition-colors">
-                  <ArrowRight size={20} weight="bold" />
-                </Link>
-              </div>
-            )}
+        <div className="bg-surface/40 backdrop-blur-xl border border-white/5 rounded-3xl p-6 sm:p-8">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xs font-semibold uppercase tracking-widest text-neutral-500 flex items-center gap-2">
+              <Users weight="fill" className="text-blue-400/70" size={16} />
+              Your Squad
+            </h3>
+            <Link href="/friends" className="text-xs text-primary hover:text-primary/80 transition-colors">
+              View All
+            </Link>
           </div>
+          
+          {!user.friends || user.friends.length === 0 ? (
+            <div className="text-neutral-500 font-light text-center py-6 text-sm bg-background/50 rounded-2xl border border-border">
+              You haven&apos;t added any friends yet.
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-3">
+              {user.friends.map(friend => (
+                <div 
+                  key={friend._id} 
+                  onClick={() => router.push(`/friends/${friend._id}`)}
+                  className="relative group cursor-pointer"
+                >
+                  <div className="w-12 h-12 rounded-full border border-border bg-background overflow-hidden transition-all group-hover:scale-105 group-hover:border-primary/50">
+                    {friend.profilePicture ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img src={friend.profilePicture} alt={friend.name} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-primary font-medium text-sm">{friend.name.charAt(0)}</div>
+                    )}
+                  </div>
+                  {/* Tooltip */}
+                  <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-surface border border-border text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-20">
+                    {friend.name}
+                  </div>
+                </div>
+              ))}
+              <button onClick={() => router.push("/friends")} className="w-12 h-12 rounded-full border border-dashed border-border bg-background/50 flex items-center justify-center text-neutral-500 hover:text-primary hover:border-primary/50 transition-colors">
+                <ArrowRight size={16} weight="bold" />
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Recent Feedback */}
-        <div>
-          <h3 className="text-sm font-bold uppercase tracking-widest text-neutral-500 mb-6 flex items-center gap-2">
-            <ChatCircle weight="fill" className="text-pink-400" />
+        <div className="bg-surface/40 backdrop-blur-xl border border-white/5 rounded-3xl p-6 sm:p-8">
+          <h3 className="text-xs font-semibold uppercase tracking-widest text-neutral-500 mb-6 flex items-center gap-2">
+            <ChatCircle weight="fill" className="text-pink-400/70" size={16} />
             Feedback Received Today
           </h3>
-          <div className="space-y-4">
+          <div className="space-y-3">
             {reviews.length === 0 ? (
-              <div className="glass-panel rounded-3xl p-8 text-center text-neutral-500 font-light border border-dashed border-border/50">
-                No roasts or toasts today. They're watching you.
+              <div className="bg-background/50 rounded-2xl p-6 text-center text-neutral-500 font-light border border-border text-sm">
+                No roasts or toasts today.
               </div>
             ) : (
               reviews.map((review, idx) => (
                 <motion.div
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.1 * idx }}
                   key={review._id}
-                  className="glass-panel p-5 rounded-3xl flex gap-4 hover:bg-surface-hover transition-colors"
+                  className="bg-background/50 border border-border p-4 rounded-2xl flex gap-3 hover:border-primary/20 transition-colors"
                 >
-                  <div className="w-10 h-10 rounded-full overflow-hidden border border-border shrink-0 bg-surface">
+                  <div className="w-8 h-8 rounded-full overflow-hidden border border-border shrink-0 bg-surface">
                     {review.reviewerId.profilePicture ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
                       <img src={review.reviewerId.profilePicture} alt="Reviewer" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-primary text-sm font-medium">
+                      <div className="w-full h-full flex items-center justify-center text-primary text-xs font-medium">
                         {review.reviewerId.name?.charAt(0) || "?"}
                       </div>
                     )}
                   </div>
                   <div className="flex-1">
-                    <p className="text-xs text-neutral-500 font-medium mb-1">{review.reviewerId.name || "A friend"} said:</p>
-                    <p className="text-white font-light italic">"{review.content}"</p>
+                    <p className="text-[10px] uppercase text-neutral-500 font-medium mb-0.5">{review.reviewerId.name || "A friend"}</p>
+                    <p className="text-white font-light text-sm">&quot;{review.content}&quot;</p>
                   </div>
                 </motion.div>
               ))
@@ -262,26 +274,23 @@ export default function Profile() {
       </div>
 
       {/* History CTA Banner */}
-      <Link href="/history">
-        <motion.div
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          className="relative overflow-hidden rounded-4xl group cursor-pointer border border-primary/20 shadow-[0_0_40px_rgba(157,78,221,0.1)] hover:shadow-[0_0_60px_rgba(157,78,221,0.2)] transition-all"
-        >
-          <div className="absolute inset-0 bg-linear-to-r from-primary/10 via-surface to-primary/5 z-0"></div>
-          <div className="absolute top-0 right-0 w-64 h-64 bg-primary/20 rounded-full blur-[80px] pointer-events-none group-hover:bg-primary/30 transition-colors"></div>
-
-          <div className="relative z-10 p-10 flex flex-col sm:flex-row items-center justify-between gap-6">
+      <div className="mt-4">
+        <Link href="/history">
+          <motion.div
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.99 }}
+            className="bg-surface/40 backdrop-blur-xl border border-white/5 rounded-3xl p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-4 group hover:border-primary/20 transition-all"
+          >
             <div className="text-center sm:text-left">
-              <h2 className="text-3xl font-light text-white mb-2 tracking-tight">Your Complete <span className="text-gradient font-medium">Legacy</span></h2>
-              <p className="text-neutral-400 font-light">Explore every task you've ever completed in the timeline view.</p>
+              <h2 className="text-xl sm:text-2xl font-medium text-white tracking-tight mb-1">Your Complete Legacy</h2>
+              <p className="text-neutral-500 font-light text-sm">Explore every task you&apos;ve ever completed in the timeline view.</p>
             </div>
-            <div className="w-14 h-14 rounded-full bg-primary text-white flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform shadow-lg">
-              <ArrowRight size={24} weight="bold" />
+            <div className="w-10 h-10 rounded-full bg-background border border-border text-primary flex items-center justify-center shrink-0 group-hover:bg-primary/10 transition-colors">
+              <ArrowRight size={18} weight="bold" />
             </div>
-          </div>
-        </motion.div>
-      </Link>
+          </motion.div>
+        </Link>
+      </div>
     </div>
   );
 }

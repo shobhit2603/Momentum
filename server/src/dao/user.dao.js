@@ -64,7 +64,7 @@ export async function acceptFriendRequest(userId, requesterId) {
 }
 
 export async function getFriends(userId) {
-  const user = await User.findById(userId).populate("friends", "name email profilePicture streak lastActive");
+  const user = await User.findById(userId).populate("friends", "name email profilePicture streak lastActive friends");
   if (!user || !user.friends) return [];
   
   const uniqueMap = new Map();
