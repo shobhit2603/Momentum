@@ -226,6 +226,6 @@ Distributed under the MIT License. See `LICENSE` for more details.
 
 <div align="center">
 
-Built with ❤️ by [Shobhit](https://github.com/shobhit2603) and friends.
+Built with ❤️ by [Shobhit](https://github.com/shobhit2603).
 
 </div>
